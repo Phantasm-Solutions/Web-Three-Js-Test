@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three.js 3D City Simulation & Stress Test Suite</title>
+  <link rel="stylesheet" href="./src/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- WebGL 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+    <!-- Top Header -->
+    <div class="header-bar">
+      <!-- Left: Performance Diagnostic HUD -->
+      <div class="hud-card glass-panel" id="stats-hud">
+        <div class="hud-header">
+          <div class="hud-title">
+            <span class="brand-dot"></span>
+            Performance Monitor
+          </div>
+          <span style="font-size: 10px; color: #94a3b8; font-family: monospace;">WEBGL2</span>
+        </div>
+
+        <!-- Hero FPS -->
+        <div class="fps-hero">
+          <div class="fps-value" id="val-fps">60</div>
+          <div class="fps-stats">
+            <div>AVG: <span id="val-fps-avg" style="color: #f8fafc;">60</span> FPS</div>
+            <div>MIN: <span id="val-fps-min" style="color: #f8fafc;">60</span> | 1% LOW: <span id="val-fps-low" style="color: #f8fafc;">58</span></div>
+            <div>FRAME: <span id="val-frame-time" style="color: #38bdf8;">16.6</span> ms</div>
+          </div>
+        </div>
+
+        <!-- Frame Time / FPS Rolling Graph -->
+        <canvas id="fps-graph-canvas" width="280" height="48"></canvas>
+
+        <!-- Technical Metrics Grid -->
+        <div class="metric-grid">
+          <div class="metric-item">
+            <div class="metric-label">Triangles</div>
+            <div class="metric-val" id="val-triangles">0</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Draw Calls</div>
+            <div class="metric-val" id="val-drawcalls">0</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Pedestrians</div>
+            <div class="metric-val" id="val-pedestrians" style="color: #34d399;">0</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Vehicles</div>
+            <div class="metric-val" id="val-vehicles" style="color: #f472b6;">0</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Geometries</div>
+            <div class="metric-val" id="val-geometries">0</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Textures</div>
+            <div class="metric-val" id="val-textures">0</div>
+          </div>
+        </div>
+
+        <!-- GPU Hardware Specs -->
+        <div class="gpu-info-box">
+          <div id="val-gpu-renderer">Detecting GPU...</div>
+          <div id="val-screen-res">Res: 1920x1080 (DPR: 1.0)</div>
+        </div>
+      </div>
+
+      <!-- Right: Navigation, Views & Lighting Controls -->
+      <div class="nav-toolbar">
+        <!-- Lighting / Time Mode -->
+        <div class="button-group glass-panel">
+          <button class="tool-btn active" id="btn-tod-day" title="Daylight">☀️ Day</button>
+          <button class="tool-btn" id="btn-tod-sunset" title="Golden Hour">🌅 Sunset</button>
+          <button class="tool-btn" id="btn-tod-night" title="Night City">🌙 Night</button>
+        </div>
+
+        <!-- Camera Presets -->
+        <div class="button-group glass-panel">
+          <button class="tool-btn active" id="cam-iso" title="Isometric Architectural View">📐 Isometric</button>
+          <button class="tool-btn" id="cam-street" title="Street Level View">🚶 Street</button>
+          <button class="tool-btn" id="cam-rooftop" title="Skyscraper Rooftop View">🏢 Rooftop</button>
+          <button class="tool-btn" id="cam-aerial" title="Top-Down Aerial View">🛰️ Top-Down</button>
+          <button class="tool-btn" id="cam-orbit" title="Cinematic Orbiting Camera">🎬 Tour</button>
+        </div>
+
+        <!-- Selected Object Inspector -->
+        <div class="glass-panel" id="target-tracker">
+          <div style="font-size: 11px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">TARGET TRACKING</div>
+          <div id="target-title" style="font-size: 13px; font-weight: 700; color: white;">Citizen #1024</div>
+          <div id="target-info" style="font-size: 11px; color: #94a3b8; font-family: monospace;">Speed: 1.4 m/s | Walking</div>
+          <button id="btn-cancel-track" class="btn-secondary" style="margin-top: 8px; width: 100%; padding: 4px;">Release Target</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Mobile Touch Action Widget -->
+    <div id="mobile-touch-bar" class="glass-panel">
+      <button class="touch-btn" id="btn-touch-zoomin" title="Zoom In">➕</button>
+      <button class="touch-btn" id="btn-touch-zoomout" title="Zoom Out">➖</button>
+      <button class="touch-btn active" id="btn-touch-mode" title="Toggle 1-Finger Mode">👆 Pan</button>
+      <button class="touch-btn" id="btn-touch-reset" title="Reset View">📐</button>
+      <button class="touch-btn" id="btn-toggle-hud" title="Toggle Stats HUD">📊</button>
+      <button class="touch-btn" id="btn-toggle-drawer" title="Toggle Controls Panel">⚙️</button>
+    </div>
+
+    <!-- Bottom Stress Testing Bar -->
+    <div class="bottom-controls-bar glass-panel" id="bottom-controls-bar">
+      <!-- Mobile Drawer Handle -->
+      <div id="drawer-toggle-handle">
+        <span class="handle-bar"></span>
+        <span class="handle-title">⚙️ Controls & Stress Test (Tap to Expand/Collapse)</span>
+      </div>
+
+      <div class="controls-row">
+        <!-- Pedestrian Load Slider -->
+        <div class="control-group">
+          <span class="control-label">🚶 Pedestrians:</span>
+          <div class="slider-container">
+            <input type="range" id="slider-pedestrians" min="0" max="15000" step="100" value="1500" />
+            <span class="slider-val" id="lbl-pedestrians">1,500</span>
+          </div>
+        </div>
+
+        <!-- Vehicle Load Slider -->
+        <div class="control-group">
+          <span class="control-label">🚗 Vehicles:</span>
+          <div class="slider-container">
+            <input type="range" id="slider-vehicles" min="0" max="3000" step="50" value="300" />
+            <span class="slider-val" id="lbl-vehicles">300</span>
+          </div>
+        </div>
+
+        <!-- City Size Selector -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">🏙️ City Size:</span>
+          <div class="pill-select" id="pill-city-size">
+            <button class="pill-option" data-size="4">Small (4x4)</button>
+            <button class="pill-option active" data-size="6">Medium (6x6)</button>
+            <button class="pill-option" data-size="8">Large (8x8)</button>
+            <button class="pill-option" data-size="12">Mega (12x12)</button>
+          </div>
+        </div>
+
+        <!-- Automated Benchmark Button -->
+        <button class="benchmark-btn" id="btn-run-benchmark">
+          ⚡ Run Stress Test
+        </button>
+      </div>
+
+      <div class="controls-row" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+        <!-- Shadows Quality -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">Shadows:</span>
+          <div class="pill-select" id="pill-shadows">
+            <button class="pill-option" data-val="off">Off</button>
+            <button class="pill-option active" data-val="soft">Soft</button>
+            <button class="pill-option" data-val="high">High Res</button>
+          </div>
+        </div>
+
+        <!-- DPR Multiplier -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">DPR Scale:</span>
+          <div class="pill-select" id="pill-dpr">
+            <button class="pill-option" data-val="0.75">0.75x</button>
+            <button class="pill-option active" data-val="1">1.0x</button>
+            <button class="pill-option" data-val="1.5">1.5x</button>
+            <button class="pill-option" data-val="2">2.0x</button>
+          </div>
+        </div>
+
+        <!-- Draw Mode / Architecture -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">Draw Mode:</span>
+          <div class="pill-select" id="pill-mode">
+            <button class="pill-option active" data-mode="instanced" title="GPU InstancedMesh (Efficient)">Instanced (Low Calls)</button>
+            <button class="pill-option" data-mode="stress-calls" title="Individual Meshes (Stress Draw Calls)">Individual Meshes (Draw Stress)</button>
+          </div>
+        </div>
+
+        <!-- Quick Help Note -->
+        <div class="help-tip" style="flex: 1 1 auto; text-align: right;">
+          💡 Left click: Orbit | Right click: Pan | Scroll: Zoom | Click person or car to track
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Benchmark Modal Overlay -->
+  <div id="benchmark-modal">
+    <div class="benchmark-card glass-panel">
+      <div class="bench-title">⚡ Browser & Hardware Stress Benchmark</div>
+      <div class="bench-subtitle" id="bench-desc">Executing automated 25-second multi-phase stress test...</div>
+
+      <div class="bench-progress-bar">
+        <div class="bench-progress-fill" id="bench-progress-fill"></div>
+      </div>
+      <div class="bench-status-txt" id="bench-status-txt">Phase 1/4: Initializing Baseline (60 FPS)...</div>
+
+      <div id="bench-results-container" style="display: none;">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th style="text-align: right;">Result</th>
+            </tr>
+          </thead>
+          <tbody id="bench-results-body">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+
+        <div style="font-size: 11px; color: #94a3b8; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; margin-top: 8px;">
+          Hardware: <span id="bench-hw-string" style="color: #cbd5e1; font-family: monospace;"></span>
+        </div>
+
+        <div class="bench-actions">
+          <button class="btn-secondary" id="btn-bench-copy">📋 Copy Report</button>
+          <button class="btn-secondary" id="btn-bench-json">💾 Export JSON</button>
+          <button class="btn-primary" id="btn-bench-close">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast">Report copied to clipboard!</div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
