@@ -1,5 +1,7 @@
 # 🏙️ Three.js Procedural City Simulation & Stress Benchmark Suite
 
+🌐 **Live Demo**: [https://threejs.phantasm.biz](https://threejs.phantasm.biz)
+
 A high-performance, interactive 3D procedural metropolis inspired by architectural maps like [era.estate/3d-map](https://era.estate/3d-map). Built with **Three.js** and **Vite**, featuring procedural modern architecture, road systems, autonomous pedestrian walkers, driving traffic, dynamic camera presets, and a comprehensive real-time diagnostic and automated stress-testing suite for benchmarking across multiple PCs.
 
 ---
