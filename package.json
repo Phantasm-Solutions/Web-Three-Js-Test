@@ -6,7 +6,7 @@
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5173",
-    "deploy": "vite build && scp -o BatchMode=yes -r dist/* dist/.htaccess root@157.230.117.212:/var/www/threejs/ && ssh root@157.230.117.212 \"chown -R deploy:deploy /var/www/threejs && chmod -R 755 /var/www/threejs\""
+    "deploy": "vite build && scp -o BatchMode=yes -r dist/* dist/.htaccess root@157.230.117.212:/var/www/threejs/ && ssh -o BatchMode=yes root@157.230.117.212 \"chown -R deploy:deploy /var/www/threejs && chmod -R 755 /var/www/threejs\""
   },
   "dependencies": {
     "three": "^0.186.1"

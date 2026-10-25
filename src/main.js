@@ -302,9 +302,11 @@ class CityApp {
           parentInstance = parentInstance.parent;
         }
         this.cameraController.focusObject(parentInstance, 80);
+        const meshes = this.modelManager.activeModelInfo ? this.modelManager.activeModelInfo.meshes : 20;
+        const tris = this.modelManager.activeModelInfo ? (this.modelManager.activeModelInfo.triangles / 1000).toFixed(1) : '26.0';
         this.showTargetTracker(
-          '🏢 Building 1 (Custom Model)',
-          'Commercial Mid-Rise | 17 Meshes | 19.6k Triangles'
+          `🏢 ${this.modelManager.activeModelInfo?.filename || 'Building 1'} (Custom Model)`,
+          `Commercial Architecture | ${meshes} Meshes | ${tris}k Triangles`
         );
         return;
       }
@@ -383,5 +385,5 @@ class CityApp {
 
 // Instantiate on DOM ready
 window.addEventListener('DOMContentLoaded', () => {
-  new CityApp();
+  window.cityApp = new CityApp();
 });

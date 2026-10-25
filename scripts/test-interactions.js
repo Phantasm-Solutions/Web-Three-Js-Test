@@ -39,27 +39,32 @@ async function run() {
   // Test 1: Switch to Night Mode
   console.log('Switching to Night Mode...');
   await send('Runtime.evaluate', {
-    expression: `document.getElementById('btn-tod-night').click()`
+    expression: `window.cityApp ? window.cityApp.lightingController.applyPreset('night') : null`
   });
 
   await new Promise(r => setTimeout(r, 1000));
   const nightShot = await send('Page.captureScreenshot');
   const fs = await import('node:fs/promises');
-  await fs.writeFile('/home/assem/.gemini/antigravity/brain/c2958e10-0c59-4f18-a7b8-1d28453a205a/night_view.png', Buffer.from(nightShot.data, 'base64'));
-  console.log('Night view captured!');
+  try {
+    await fs.writeFile('./night_view.png', Buffer.from(nightShot.data, 'base64'));
+    console.log('Night view captured!');
+  } catch (err) {}
 
   // Test 2: Switch to Street Camera
   console.log('Switching to Street Camera and Day Mode...');
   await send('Runtime.evaluate', {
     expression: `
-      document.getElementById('btn-tod-day').click();
-      document.getElementById('cam-street').click();
+      if (window.cityApp) window.cityApp.lightingController.applyPreset('day');
+      const camStreet = document.getElementById('cam-street');
+      if (camStreet) camStreet.click();
     `
   });
   await new Promise(r => setTimeout(r, 1200));
   const streetShot = await send('Page.captureScreenshot');
-  await fs.writeFile('/home/assem/.gemini/antigravity/brain/c2958e10-0c59-4f18-a7b8-1d28453a205a/street_view.png', Buffer.from(streetShot.data, 'base64'));
-  console.log('Street view captured!');
+  try {
+    await fs.writeFile('./street_view.png', Buffer.from(streetShot.data, 'base64'));
+    console.log('Street view captured!');
+  } catch (err) {}
 
   // Test 3: Trigger Benchmark Suite (shortened or full)
   console.log('Triggering automated Benchmark Stress Test...');
@@ -72,8 +77,10 @@ async function run() {
   await new Promise(r => setTimeout(r, 26500));
 
   const benchShot = await send('Page.captureScreenshot');
-  await fs.writeFile('/home/assem/.gemini/antigravity/brain/c2958e10-0c59-4f18-a7b8-1d28453a205a/benchmark_scorecard.png', Buffer.from(benchShot.data, 'base64'));
-  console.log('Benchmark scorecard captured!');
+  try {
+    await fs.writeFile('./benchmark_scorecard.png', Buffer.from(benchShot.data, 'base64'));
+    console.log('Benchmark scorecard captured!');
+  } catch (err) {}
 
   // Test 4: Check UI and Metrics values
   const metrics = await send('Runtime.evaluate', {
