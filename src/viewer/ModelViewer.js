@@ -143,10 +143,13 @@ export class ModelViewer {
 
     viewerOverlay.innerHTML = `
       <!-- Viewer Sidebar: Model List & File Actions -->
-      <div class="viewer-sidebar glass-panel">
-        <div class="viewer-section-title">
+      <div class="viewer-sidebar glass-panel" id="viewer-sidebar">
+        <div class="viewer-section-title" id="viewer-sidebar-header" style="cursor: pointer;" title="Click to Collapse / Expand Sidebar">
           <span>📁 Models in Project</span>
-          <button id="btn-refresh-models" class="btn-icon-tiny" title="Refresh folder">🔄</button>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button id="btn-refresh-models" class="btn-icon-tiny" title="Refresh folder">🔄</button>
+            <button id="btn-collapse-viewer-sidebar" class="btn-collapse-icon" title="Collapse / Expand Sidebar">−</button>
+          </div>
         </div>
 
         <!-- Models List -->
@@ -303,7 +306,28 @@ export class ModelViewer {
     // Refresh models button
     const btnRefresh = o.querySelector('#btn-refresh-models');
     if (btnRefresh) {
-      btnRefresh.addEventListener('click', () => this.refreshModelsList());
+      btnRefresh.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.refreshModelsList();
+      });
+    }
+
+    // Collapse / Expand sidebar
+    const sidebar = o.querySelector('#viewer-sidebar');
+    const btnCollapseSidebar = o.querySelector('#btn-collapse-viewer-sidebar');
+    const headerSidebar = o.querySelector('#viewer-sidebar-header');
+    if (sidebar && btnCollapseSidebar && headerSidebar) {
+      const toggleSidebarCollapse = (e) => {
+        if (e.target.closest('#btn-refresh-models')) return;
+        sidebar.classList.toggle('collapsed');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        btnCollapseSidebar.textContent = isCollapsed ? '+' : '−';
+      };
+      headerSidebar.addEventListener('click', toggleSidebarCollapse);
+      btnCollapseSidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSidebarCollapse(e);
+      });
     }
 
     // Browse file button
