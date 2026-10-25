@@ -89,11 +89,13 @@ class CityApp {
     const bottomBar = document.getElementById('bottom-controls-bar');
     const mobileTouchBar = document.getElementById('mobile-touch-bar');
     const targetTracker = document.getElementById('target-tracker');
+    const cityCameraBar = document.getElementById('city-camera-bar');
 
     if (hud) hud.style.display = isCity ? '' : 'none';
     if (bottomBar) bottomBar.style.display = isCity ? '' : 'none';
     if (mobileTouchBar) mobileTouchBar.style.display = isCity ? '' : 'none';
     if (targetTracker) targetTracker.style.display = isCity ? '' : 'none';
+    if (cityCameraBar) cityCameraBar.style.display = isCity ? '' : 'none';
 
     this.cameraController.controls.enabled = isCity;
     this.modelViewer.setActive(!isCity);
