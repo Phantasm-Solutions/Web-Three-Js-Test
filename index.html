@@ -15,16 +15,30 @@
 
   <!-- UI Overlay -->
   <div id="ui-overlay">
+    <!-- Center Screen Mode Switcher Tabs (True 50% Horizontal Screen Center) -->
+    <div class="view-tabs glass-panel">
+      <button class="view-tab-btn active" id="btn-tab-city" title="3D Procedural City Simulation">
+        🏙️ City Simulation
+      </button>
+      <button class="view-tab-btn" id="btn-tab-viewer" title="Browse and Inspect 3D Models in models/ folder">
+        📦 Model Viewer
+      </button>
+    </div>
+
     <!-- Top Header -->
     <div class="header-bar">
       <!-- Left: Performance Diagnostic HUD -->
       <div class="hud-card glass-panel" id="stats-hud">
-        <div class="hud-header">
+        <div class="hud-header" id="hud-header-toggle" title="Click to Collapse / Expand Performance Monitor">
           <div class="hud-title">
             <span class="brand-dot"></span>
             Performance Monitor
           </div>
-          <span style="font-size: 10px; color: #94a3b8; font-family: monospace;">WEBGL2</span>
+          <div class="hud-header-actions">
+            <span id="collapsed-fps-badge" class="collapsed-fps-badge">60 FPS</span>
+            <span style="font-size: 10px; color: #94a3b8; font-family: monospace;">WEBGL2</span>
+            <button id="btn-collapse-hud" class="btn-collapse-icon" title="Collapse / Expand">−</button>
+          </div>
         </div>
 
         <!-- Hero FPS -->
@@ -77,15 +91,14 @@
 
       <!-- Right: Navigation, Views & Lighting Controls -->
       <div class="nav-toolbar">
-        <!-- Lighting / Time Mode -->
+        <!-- Lighting Studio Toggle -->
         <div class="button-group glass-panel">
-          <button class="tool-btn active" id="btn-tod-day" title="Daylight">☀️ Day</button>
-          <button class="tool-btn" id="btn-tod-sunset" title="Golden Hour">🌅 Sunset</button>
-          <button class="tool-btn" id="btn-tod-night" title="Night City">🌙 Night</button>
+          <button class="tool-btn" id="btn-nav-lighting" title="Open Comprehensive Lighting Studio">💡 Lighting Studio</button>
         </div>
 
         <!-- Camera Presets -->
         <div class="button-group glass-panel">
+          <button class="tool-btn" id="cam-custom-building" title="Focus Custom Building_1 Model in City">🏢 Building 1</button>
           <button class="tool-btn active" id="cam-iso" title="Isometric Architectural View">📐 Isometric</button>
           <button class="tool-btn" id="cam-street" title="Street Level View">🚶 Street</button>
           <button class="tool-btn" id="cam-rooftop" title="Skyscraper Rooftop View">🏢 Rooftop</button>
@@ -103,22 +116,27 @@
       </div>
     </div>
 
-    <!-- Floating Mobile Touch Action Widget -->
+    <!-- Floating Mobile Touch Action Widget (Touchscreens only) -->
     <div id="mobile-touch-bar" class="glass-panel">
       <button class="touch-btn" id="btn-touch-zoomin" title="Zoom In">➕</button>
       <button class="touch-btn" id="btn-touch-zoomout" title="Zoom Out">➖</button>
       <button class="touch-btn active" id="btn-touch-mode" title="Toggle 1-Finger Mode">👆 Pan</button>
       <button class="touch-btn" id="btn-touch-reset" title="Reset View">📐</button>
-      <button class="touch-btn" id="btn-toggle-hud" title="Toggle Stats HUD">📊</button>
-      <button class="touch-btn" id="btn-toggle-drawer" title="Toggle Controls Panel">⚙️</button>
     </div>
 
     <!-- Bottom Stress Testing Bar -->
     <div class="bottom-controls-bar glass-panel" id="bottom-controls-bar">
-      <!-- Mobile Drawer Handle -->
-      <div id="drawer-toggle-handle">
-        <span class="handle-bar"></span>
-        <span class="handle-title">⚙️ Controls & Stress Test (Tap to Expand/Collapse)</span>
+      <!-- Universal Collapsible Header -->
+      <div id="controls-bar-header" class="controls-bar-header" title="Click to Collapse / Expand Controls">
+        <div class="controls-header-left">
+          <span style="font-size: 14px;">⚙️</span>
+          <span class="controls-header-title">Simulation & Stress Controls</span>
+          <span id="collapsed-controls-summary" class="collapsed-controls-summary">1,500 Peds • 300 Cars • Medium (6x6)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="collapsed-expand-hint">(Tap to Expand)</span>
+          <button id="btn-collapse-controls" class="btn-collapse-icon" title="Collapse / Expand Controls">−</button>
+        </div>
       </div>
 
       <div class="controls-row">
@@ -185,6 +203,17 @@
           <div class="pill-select" id="pill-mode">
             <button class="pill-option active" data-mode="instanced" title="GPU InstancedMesh (Efficient)">Instanced (Low Calls)</button>
             <button class="pill-option" data-mode="stress-calls" title="Individual Meshes (Stress Draw Calls)">Individual Meshes (Draw Stress)</button>
+          </div>
+        </div>
+
+        <!-- Custom Building 1 Placement in City -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">🏢 Building 1 Model:</span>
+          <div class="pill-select" id="pill-custom-building">
+            <button class="pill-option active" data-val="prominent" title="Prominent placement across city blocks">Prominent</button>
+            <button class="pill-option" data-val="landmark" title="Center landmark block">Landmark</button>
+            <button class="pill-option" data-val="all" title="Used on all city blocks">All Blocks</button>
+            <button class="pill-option" data-val="off" title="Procedural buildings only">Off</button>
           </div>
         </div>
 

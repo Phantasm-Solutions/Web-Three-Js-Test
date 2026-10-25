@@ -128,6 +128,27 @@ export class CameraController {
     this.trackingTarget = null;
   }
 
+  focusObject(object3d, dist = 70) {
+    if (!object3d) return;
+    this.trackingTarget = null;
+    this.isCinematicTour = false;
+
+    const box = new THREE.Box3().setFromObject(object3d);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    const actualDist = Math.max(dist, size.length() * 0.9);
+    const targetCamPos = new THREE.Vector3(
+      center.x + actualDist * 0.7,
+      center.y + actualDist * 0.45,
+      center.z + actualDist * 0.7
+    );
+
+    this.startTransition(targetCamPos, center);
+  }
+
   update(delta) {
     if (this.isTransitioning) {
       this.transitionProgress += delta / this.transitionDuration;

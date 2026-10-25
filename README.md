@@ -59,7 +59,34 @@ npm run preview
 - **Target Tracking**:
   - Click any walking citizen or driving vehicle in the city to lock the camera to track and follow them!
 
-### 4. Diagnostic Performance HUD & Stress Testing Suite
+### 4. 📦 3D Model Viewer & Assets Browser
+- **Dedicated Model Viewer Tab**:
+  - Switch between the **🏙️ City Simulation** and **📦 Model Viewer** via top tabs.
+  - Automatically discovers and lists all 3D models in the `models/` directory (`.obj`, `.gltf`, `.glb`, `.fbx`).
+  - **Drag & Drop / Local File Upload**: Drop any 3D asset directly onto the viewer.
+  - **Inspection Modes**: Shaded (PBR), Wireframe, Clay Matte, and Surface Normals.
+  - **Model Diagnostics**: Real-time polygon count, vertex count, mesh components, and physical dimensions.
+  - **Interactive 3D Studio**: OrbitControls, camera auto-rotate, floor grid toggle, and "Fit to View".
+  - **Use in City**: One-click action to inject and place the viewed model directly into the city simulation.
+
+### 5. 🏢 Custom Building Model Integration (`Building_1.glb`)
+- Loads and normalizes `models/Building_1.glb` with automatic pivot centering and ground alignment.
+- Refined architectural materials with realistic glass reflectivity, metal trim, and night window glow.
+- Integrates seamlessly onto city blocks with customizable density:
+  - **Prominent**: Placed across prime city blocks.
+  - **Landmark**: Placed as the central skyscraper monument.
+  - **All Blocks**: Populates all blocks in the metropolis.
+- **Focus Camera**: One-click camera button (`🏢 Building 1`) to smoothly fly to and frame the custom building.
+
+### 6. 💡 Comprehensive Lighting Studio & Atmosphere
+- **Floating Lighting Studio Drawer**: Interactive atmosphere and lighting controls.
+- **24-Hour Timeline & Animated Cycle**: Continuous scrub slider with Play/Pause 24h cycle and speed options.
+- **Sun Directional Controls**: Real-time Elevation (0°–90°), Azimuth rotation (0°–360°), and Sun intensity.
+- **Skylight & Tone Mapping**: Ambient intensity, Sky tint, Ground tint, Fog density, and Camera exposure.
+- **Night Window & Street Glow**: Adjustable emissive glow intensity and color for night city scenes.
+- **Atmosphere Presets**: Daylight, Golden Hour Sunset, Cyber Night, Overcast Studio, and Sunrise Dawn.
+
+### 7. Diagnostic Performance HUD & Stress Testing Suite
 - **Real-Time Performance Monitor**:
   - Instant FPS, Average FPS, Minimum FPS, and **1% Low FPS**.
   - Frame time in milliseconds (ms) with a rolling canvas waveform graph.

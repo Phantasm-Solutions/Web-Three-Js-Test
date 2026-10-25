@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CityGenerator } from './city/CityGenerator.js';
 import { PedestrianManager } from './simulation/PedestrianManager.js';
 import { TrafficManager } from './simulation/TrafficManager.js';
@@ -6,55 +7,36 @@ import { CameraController } from './controls/CameraController.js';
 import { StatsHUD } from './ui/StatsHUD.js';
 import { StressPanel } from './ui/StressPanel.js';
 import { BenchmarkSuite } from './ui/BenchmarkSuite.js';
+import { ModelManager } from './models/ModelManager.js';
+import { ModelViewer } from './viewer/ModelViewer.js';
+import { LightingController } from './lighting/LightingController.js';
 
 class CityApp {
   constructor() {
     this.container = document.getElementById('canvas-container');
+    this.currentTab = 'city'; // 'city' | 'viewer'
 
-    // Time & Lighting presets
-    this.lightingModes = {
-      day: {
-        skyColor: 0xdbeafe,
-        fogColor: 0xdbeafe,
-        ambient: 0x94a3b8,
-        ambientIntensity: 0.85,
-        sun: 0xfffbeb,
-        sunIntensity: 2.2,
-        sunPos: [180, 260, 140]
-      },
-      sunset: {
-        skyColor: 0xfdba74,
-        fogColor: 0xfdba74,
-        ambient: 0x7c2d12,
-        ambientIntensity: 1.1,
-        sun: 0xf97316,
-        sunIntensity: 3.0,
-        sunPos: [260, 60, -200]
-      },
-      night: {
-        skyColor: 0x090d16,
-        fogColor: 0x090d16,
-        ambient: 0x334155,
-        ambientIntensity: 0.9,
-        sun: 0x60a5fa,
-        sunIntensity: 0.9,
-        sunPos: [140, 220, 100]
-      }
-    };
-
-    this.currentMode = 'day';
     this.lastFrameTime = performance.now();
     this.elapsedTime = 0;
+
+    // 3D Asset & Model Manager
+    this.modelManager = new ModelManager();
 
     this.initRenderer();
     this.initScene();
     this.initCamera();
     this.initLighting();
 
-    // Managers
-    this.city = new CityGenerator(this.scene, { gridSize: 6 });
-    this.city.generate();
+    // Lighting & Atmosphere Controller
+    this.lightingController = new LightingController(this);
 
+    // City Generator
+    this.city = new CityGenerator(this.scene, { gridSize: 6 });
+
+    // Model Viewer Tab Component
+    this.modelViewer = new ModelViewer(this);
+
+    // Simulations & Controllers
     this.pedestrians = new PedestrianManager(this.scene, this.city);
     this.traffic = new TrafficManager(this.scene, this.city);
     this.cameraController = new CameraController(this.camera, this.renderer.domElement, this.scene);
@@ -64,11 +46,96 @@ class CityApp {
     this.stressPanel = new StressPanel(this);
 
     this.initInteraction();
+    this.initViewTabs();
     this.setupResizeListener();
+
+    // Load custom building model and generate initial city
+    this.initBuildingModel();
 
     // Kick off animation loop
     this.animate = this.animate.bind(this);
     requestAnimationFrame(this.animate);
+  }
+
+  async initBuildingModel() {
+    try {
+      const { model, info } = await this.modelManager.loadModel('/models/Building_1.glb', 'Building_1.glb');
+      this.city.setCustomBuilding(model, info, 'prominent');
+    } catch (e) {
+      console.warn('Initial load of Building_1.glb failed:', e);
+    } finally {
+      this.rebuildCity(this.city.gridSize);
+    }
+  }
+
+  initViewTabs() {
+    const btnCity = document.getElementById('btn-tab-city');
+    const btnViewer = document.getElementById('btn-tab-viewer');
+    if (btnCity) btnCity.addEventListener('click', () => this.switchTab('city'));
+    if (btnViewer) btnViewer.addEventListener('click', () => this.switchTab('viewer'));
+  }
+
+  switchTab(tab) {
+    if (this.currentTab === tab) return;
+    this.currentTab = tab;
+
+    const btnCity = document.getElementById('btn-tab-city');
+    const btnViewer = document.getElementById('btn-tab-viewer');
+    if (btnCity) btnCity.classList.toggle('active', tab === 'city');
+    if (btnViewer) btnViewer.classList.toggle('active', tab === 'viewer');
+
+    const isCity = tab === 'city';
+    const hud = document.getElementById('stats-hud');
+    const bottomBar = document.getElementById('bottom-controls-bar');
+    const mobileTouchBar = document.getElementById('mobile-touch-bar');
+    const targetTracker = document.getElementById('target-tracker');
+
+    if (hud) hud.style.display = isCity ? '' : 'none';
+    if (bottomBar) bottomBar.style.display = isCity ? '' : 'none';
+    if (mobileTouchBar) mobileTouchBar.style.display = isCity ? '' : 'none';
+    if (targetTracker) targetTracker.style.display = isCity ? '' : 'none';
+
+    this.cameraController.controls.enabled = isCity;
+    this.modelViewer.setActive(!isCity);
+  }
+
+  useModelInCity(modelName, customScale = 1.0) {
+    if (this.modelManager.activeModel) {
+      this.city.setCustomBuilding(
+        this.modelManager.activeModel,
+        this.modelManager.activeModelInfo,
+        'prominent',
+        customScale
+      );
+      this.rebuildCity(this.city.gridSize);
+      this.switchTab('city');
+      setTimeout(() => {
+        this.focusCustomBuilding();
+      }, 350);
+      this.showToast(`Placed ${modelName} (${(customScale * 100).toFixed(0)}% scale) into city simulation!`);
+    }
+  }
+
+  setCustomBuildingPlacement(placement) {
+    this.city.customBuildingPlacement = placement;
+    this.rebuildCity(this.city.gridSize);
+  }
+
+  focusCustomBuilding() {
+    if (this.city.customBuildingInstances && this.city.customBuildingInstances.length > 0) {
+      this.cameraController.focusObject(this.city.customBuildingInstances[0]);
+    } else {
+      this.showToast('No Building 1 instances are placed in current density mode.');
+    }
+  }
+
+  showToast(msg) {
+    const toast = document.getElementById('toast');
+    if (toast) {
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 3000);
+    }
   }
 
   initRenderer() {
@@ -86,16 +153,21 @@ class CityApp {
 
     // Shadow mapping
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.container.appendChild(this.renderer.domElement);
   }
 
   initScene() {
     this.scene = new THREE.Scene();
-    const cfg = this.lightingModes.day;
-    this.scene.background = new THREE.Color(cfg.skyColor);
-    this.scene.fog = new THREE.FogExp2(cfg.fogColor, 0.0016);
+    this.scene.background = new THREE.Color(0xdbeafe);
+    this.scene.fog = null; // No fog: maximum clarity across the metropolis
+
+    // Generate real-time Image-Based Lighting environment map for natural glass & metal reflections
+    const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+    pmremGenerator.compileEquirectangularShader();
+    this.envMap = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environment = this.envMap;
   }
 
   initCamera() {
@@ -103,19 +175,17 @@ class CityApp {
       45,
       window.innerWidth / window.innerHeight,
       1.0,
-      2500
+      4000
     );
     this.camera.position.set(340, 300, 340);
   }
 
   initLighting() {
-    const cfg = this.lightingModes.day;
-
-    this.ambientLight = new THREE.HemisphereLight(cfg.ambient, 0x1e293b, cfg.ambientIntensity);
+    this.ambientLight = new THREE.HemisphereLight(0x94a3b8, 0x1e293b, 0.85);
     this.scene.add(this.ambientLight);
 
-    this.sunLight = new THREE.DirectionalLight(cfg.sun, cfg.sunIntensity);
-    this.sunLight.position.set(...cfg.sunPos);
+    this.sunLight = new THREE.DirectionalLight(0xfffbeb, 2.2);
+    this.sunLight.position.set(180, 260, 140);
     this.sunLight.castShadow = true;
 
     // Optimize shadow frustum coverage
@@ -128,27 +198,16 @@ class CityApp {
     this.sunLight.shadow.camera.far = 1000;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
-    this.sunLight.shadow.bias = -0.0004;
+    this.sunLight.shadow.bias = -0.0001;
+    this.sunLight.shadow.normalBias = 0.02;
 
     this.scene.add(this.sunLight);
   }
 
   setTimeOfDay(mode) {
-    if (!this.lightingModes[mode]) return;
-    this.currentMode = mode;
-    const cfg = this.lightingModes[mode];
-
-    this.scene.background.set(cfg.skyColor);
-    this.scene.fog.color.set(cfg.fogColor);
-
-    this.ambientLight.color.set(cfg.ambient);
-    this.ambientLight.intensity = cfg.ambientIntensity;
-
-    this.sunLight.color.set(cfg.sun);
-    this.sunLight.intensity = cfg.sunIntensity;
-    this.sunLight.position.set(...cfg.sunPos);
-
-    this.city.setLightingMode(mode);
+    if (this.lightingController) {
+      this.lightingController.applyPreset(mode);
+    }
   }
 
   setShadowQuality(quality) {
@@ -191,9 +250,9 @@ class CityApp {
     });
 
     window.addEventListener('pointerup', (e) => {
-      // Check if this was a tap/click rather than a drag/pinch
+      if (this.currentTab !== 'city') return;
       const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
-      const isUiElement = e.target.closest('button, input, select, .glass-panel, #benchmark-modal');
+      const isUiElement = e.target.closest('button, input, select, .glass-panel, #benchmark-modal, .lighting-drawer');
       if (dist < 12 && !isUiElement) {
         this.handleClick(e.clientX, e.clientY);
       }
@@ -205,7 +264,7 @@ class CityApp {
     this.mouse.y = -(clientY / window.innerHeight) * 2 + 1;
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    // Check hit against pedestrians or cars
+    // 1. Check hit against pedestrians or cars
     const hits = [];
     if (this.pedestrians.instancedMesh) hits.push(this.pedestrians.instancedMesh);
     if (this.traffic.instancedMesh) hits.push(this.traffic.instancedMesh);
@@ -220,13 +279,42 @@ class CityApp {
         if (ped) {
           this.cameraController.setTrackingTarget(ped, new THREE.Vector3(0, 4, 8));
           this.showTargetTracker(`Citizen #${ped.id}`, `Speed: ${ped.speed.toFixed(1)} m/s | Walking`);
+          return;
         }
       } else if (hit.object === this.traffic.instancedMesh && instanceId !== undefined) {
         const car = this.traffic.getVehicle(instanceId);
         if (car) {
           this.cameraController.setTrackingTarget(car, new THREE.Vector3(0, 6, 14));
           this.showTargetTracker(`Vehicle #${car.id}`, `Speed: ${(car.speed * 3.6).toFixed(0)} km/h | Cruising`);
+          return;
         }
+      }
+    }
+
+    // 2. Check hit against custom building instances
+    if (this.city.customBuildingInstances && this.city.customBuildingInstances.length > 0) {
+      const bHits = this.raycaster.intersectObjects(this.city.customBuildingInstances, true);
+      if (bHits.length > 0) {
+        let parentInstance = bHits[0].object;
+        while (parentInstance.parent && parentInstance.parent !== this.city.cityGroup) {
+          parentInstance = parentInstance.parent;
+        }
+        this.cameraController.focusObject(parentInstance, 80);
+        this.showTargetTracker(
+          '🏢 Building 1 (Custom Model)',
+          'Commercial Mid-Rise | 17 Meshes | 19.6k Triangles'
+        );
+        return;
+      }
+    }
+
+    // 3. Check hit against general city blocks
+    const cityHits = this.raycaster.intersectObjects(this.city.cityGroup.children, false);
+    if (cityHits.length > 0) {
+      const hit = cityHits[0];
+      const point = hit.point;
+      if (point.y > 5) {
+        this.showTargetTracker('🏢 Metropolis Architecture', `Elevation: ${point.y.toFixed(0)}m | Batch Geometry`);
       }
     }
   }
@@ -251,6 +339,12 @@ class CityApp {
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
+
+      if (this.modelViewer && this.modelViewer.camera) {
+        this.modelViewer.camera.aspect = window.innerWidth / window.innerHeight;
+        this.modelViewer.camera.updateProjectionMatrix();
+      }
+
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.statsHUD.updateResolutionDisplay();
     });
@@ -264,19 +358,24 @@ class CityApp {
     this.lastFrameTime = now;
     this.elapsedTime += delta;
 
-    // Update simulations
-    this.pedestrians.update(delta, this.elapsedTime);
-    this.traffic.update(delta);
-    this.cameraController.update(delta);
+    if (this.currentTab === 'city') {
+      // Update simulations
+      this.pedestrians.update(delta, this.elapsedTime);
+      this.traffic.update(delta);
+      this.cameraController.update(delta);
+      this.benchmarkSuite.update();
+      this.lightingController.update(delta);
 
-    // Update benchmark if active
-    this.benchmarkSuite.update();
+      // Render WebGL frame
+      this.renderer.render(this.scene, this.camera);
 
-    // Render WebGL frame
-    this.renderer.render(this.scene, this.camera);
-
-    // Update diagnostic stats HUD
-    this.statsHUD.update(this.pedestrians.activeCount, this.traffic.activeCount);
+      // Update diagnostic stats HUD
+      this.statsHUD.update(this.pedestrians.activeCount, this.traffic.activeCount);
+    } else {
+      // Model Viewer tab
+      this.lightingController.update(delta);
+      this.modelViewer.update(delta);
+    }
   }
 }
 

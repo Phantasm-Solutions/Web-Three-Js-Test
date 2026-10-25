@@ -8,6 +8,7 @@ export class StatsHUD {
     this.elFpsMin = document.getElementById('val-fps-min');
     this.elFpsLow = document.getElementById('val-fps-low');
     this.elFrameTime = document.getElementById('val-frame-time');
+    this.elFpsBadge = document.getElementById('collapsed-fps-badge');
 
     this.elTriangles = document.getElementById('val-triangles');
     this.elDrawcalls = document.getElementById('val-drawcalls');
@@ -106,6 +107,10 @@ export class StatsHUD {
       if (this.elFps) {
         this.elFps.textContent = rFps;
         this.elFps.className = 'fps-value' + (rFps >= 45 ? '' : rFps >= 25 ? ' warn' : ' danger');
+      }
+
+      if (this.elFpsBadge) {
+        this.elFpsBadge.textContent = `${rFps} FPS`;
       }
 
       if (this.elFpsAvg) this.elFpsAvg.textContent = avgFps;

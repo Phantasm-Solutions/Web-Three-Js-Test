@@ -21,6 +21,10 @@ export class CityGenerator {
     this.buildingBoxes = [];
     this.treePositions = [];
     this.streetLightPositions = [];
+    this.customBuildingModel = null;
+    this.customBuildingInfo = null;
+    this.customBuildingInstances = [];
+    this.customBuildingPlacement = 'prominent'; // 'landmark' | 'prominent' | 'all' | 'off'
     this.stats = {
       buildingCount: 0,
       treeCount: 0,
@@ -209,9 +213,9 @@ export class CityGenerator {
       streetLampLight: []
     };
 
-    // Overall ground base
-    const totalSpan = this.gridSize * this.step + 120;
-    const baseGeo = new THREE.PlaneGeometry(totalSpan, totalSpan);
+    // Overall ground base (extended to horizon for clear views without fog)
+    const horizonSpan = Math.max(3600, this.gridSize * this.step + 1600);
+    const baseGeo = new THREE.PlaneGeometry(horizonSpan, horizonSpan);
     baseGeo.rotateX(-Math.PI / 2);
     baseGeo.translate(0, -0.05, 0);
     geometries.asphalt.push(baseGeo);
@@ -223,7 +227,7 @@ export class CityGenerator {
     const riverZ = (riverRow - half - 0.5) * this.step;
 
     if (hasRiver) {
-      const riverGeo = new THREE.PlaneGeometry(totalSpan, riverWidth);
+      const riverGeo = new THREE.PlaneGeometry(horizonSpan, riverWidth);
       riverGeo.rotateX(-Math.PI / 2);
       riverGeo.translate(0, -0.01, riverZ);
       geometries.water.push(riverGeo);
@@ -319,7 +323,28 @@ export class CityGenerator {
     }
   }
 
+  setCustomBuilding(modelGroup, info, placement = 'prominent', customScale = 1.0) {
+    this.customBuildingModel = modelGroup;
+    this.customBuildingInfo = info;
+    this.customBuildingPlacement = placement;
+    this.customBuildingScaleMultiplier = customScale;
+  }
+
   buildBuildingBlock(cx, cz, gx, gz, geos) {
+    // Check if block should host the custom 3D model
+    const half = (this.gridSize - 1) / 2;
+    const isCenterLandmark = Math.abs(gx - half) <= 0.5 && Math.abs(gz - half) <= 0.5;
+    const isCustomBlock = this.customBuildingModel && (
+      this.customBuildingPlacement === 'all' ||
+      (this.customBuildingPlacement === 'prominent' && ((gx + gz) % 2 === 0)) ||
+      (this.customBuildingPlacement === 'landmark' && isCenterLandmark)
+    );
+
+    if (isCustomBlock) {
+      this.buildCustomModelBlock(cx, cz, geos);
+      return;
+    }
+
     // Determine style based on location (Center = mega towers, Outer = mid-rises)
     const distFromCenter = Math.sqrt(Math.pow(gx - (this.gridSize - 1) / 2, 2) + Math.pow(gz - (this.gridSize - 1) / 2, 2));
     const isCenter = distFromCenter < 1.8;
@@ -339,6 +364,39 @@ export class CityGenerator {
       // Modern stepped terraced building with roof gardens
       this.buildTerracedBuilding(cx, cz, geos);
     }
+  }
+
+  buildCustomModelBlock(cx, cz, geos) {
+    this.stats.buildingCount++;
+    if (!this.customBuildingModel) return;
+
+    const instance = this.customBuildingModel.clone(true);
+    const baseMultiplier = this.customBuildingScaleMultiplier || 1.0;
+    const targetWidth = 52 * baseMultiplier;
+    const baseWidth = Math.max(
+      this.customBuildingInfo?.dimensions?.x || 5.8,
+      this.customBuildingInfo?.dimensions?.z || 5.6
+    );
+    const scale = targetWidth / baseWidth;
+
+    instance.scale.set(scale, scale, scale);
+    // Align with city streets: 0, 90, 180, 270 degrees
+    const rotIdx = Math.floor(Math.abs(Math.sin(cx * 0.13 + cz * 0.29) * 4)) % 4;
+    instance.rotation.y = (rotIdx * Math.PI) / 2;
+    instance.position.set(cx, 0.3, cz);
+
+    // Track box for camera focus and collision
+    this.buildingBoxes.push(new THREE.Box3().setFromObject(instance));
+    this.customBuildingInstances.push(instance);
+    this.cityGroup.add(instance);
+
+    // Podium / plaza base
+    const plazaGeo = new THREE.BoxGeometry(64, 0.2, 64);
+    plazaGeo.translate(cx, 0.25, cz);
+    geos.concreteBase.push(plazaGeo);
+
+    // Add perimeter sidewalk trees
+    this.addSidewalkTrees(cx, cz, geos);
   }
 
   buildMegaTower(cx, cz, height, geos) {
@@ -774,7 +832,31 @@ export class CityGenerator {
     }
   }
 
+  setEmissiveIntensity(intensity, colorHex = '#fef08a') {
+    const col = new THREE.Color(colorHex);
+    if (this.materials.glass) {
+      this.materials.glass.emissive.copy(col);
+      this.materials.glass.emissiveIntensity = intensity * 0.45;
+    }
+    if (this.materials.facadeDark) {
+      this.materials.facadeDark.emissive.copy(col);
+      this.materials.facadeDark.emissiveIntensity = intensity * 0.35;
+    }
+    if (this.materials.streetLampLight) {
+      this.materials.streetLampLight.emissive.copy(col);
+      this.materials.streetLampLight.emissiveIntensity = intensity * 1.5;
+    }
+  }
+
   clear() {
+    // Remove custom building instances
+    if (this.customBuildingInstances) {
+      for (const inst of this.customBuildingInstances) {
+        this.cityGroup.remove(inst);
+      }
+      this.customBuildingInstances = [];
+    }
+
     while (this.cityGroup.children.length > 0) {
       const obj = this.cityGroup.children[0];
       if (obj.geometry) obj.geometry.dispose();

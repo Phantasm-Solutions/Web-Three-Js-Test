@@ -78,42 +78,55 @@ export class StressPanel {
       });
     }
 
-    // Time of Day
-    const btnDay = document.getElementById('btn-tod-day');
-    const btnSunset = document.getElementById('btn-tod-sunset');
-    const btnNight = document.getElementById('btn-tod-night');
-    const todBtns = [btnDay, btnSunset, btnNight];
-
-    const setTod = (btn, mode) => {
-      todBtns.forEach(b => b && b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
-      this.app.setTimeOfDay(mode);
-    };
-
-    if (btnDay) btnDay.addEventListener('click', () => setTod(btnDay, 'day'));
-    if (btnSunset) btnSunset.addEventListener('click', () => setTod(btnSunset, 'sunset'));
-    if (btnNight) btnNight.addEventListener('click', () => setTod(btnNight, 'night'));
+    // Lighting Studio Drawer Button
+    const btnNavLighting = document.getElementById('btn-nav-lighting');
+    if (btnNavLighting) {
+      btnNavLighting.addEventListener('click', () => {
+        if (this.app.lightingController) {
+          this.app.lightingController.togglePanel();
+        }
+      });
+    }
 
     // Camera Presets
+    const camCustomBuilding = document.getElementById('cam-custom-building');
     const camIso = document.getElementById('cam-iso');
     const camStreet = document.getElementById('cam-street');
     const camRooftop = document.getElementById('cam-rooftop');
     const camAerial = document.getElementById('cam-aerial');
     const camOrbit = document.getElementById('cam-orbit');
-    const camBtns = [camIso, camStreet, camRooftop, camAerial, camOrbit];
+    const camBtns = [camCustomBuilding, camIso, camStreet, camRooftop, camAerial, camOrbit];
 
     const setCam = (btn, preset) => {
       camBtns.forEach(b => b && b.classList.remove('active'));
       if (btn) btn.classList.add('active');
-      this.app.cameraController.setPreset(preset);
+      if (preset === 'custom-building') {
+        this.app.focusCustomBuilding();
+      } else {
+        this.app.cameraController.setPreset(preset);
+      }
       this.app.hideTargetTracker();
     };
 
+    if (camCustomBuilding) camCustomBuilding.addEventListener('click', () => setCam(camCustomBuilding, 'custom-building'));
     if (camIso) camIso.addEventListener('click', () => setCam(camIso, 'iso'));
     if (camStreet) camStreet.addEventListener('click', () => setCam(camStreet, 'street'));
     if (camRooftop) camRooftop.addEventListener('click', () => setCam(camRooftop, 'rooftop'));
     if (camAerial) camAerial.addEventListener('click', () => setCam(camAerial, 'aerial'));
     if (camOrbit) camOrbit.addEventListener('click', () => setCam(camOrbit, 'orbit'));
+
+    // Custom Building 1 Placement in City Selector
+    const pillCustomBuilding = document.getElementById('pill-custom-building');
+    if (pillCustomBuilding) {
+      pillCustomBuilding.querySelectorAll('.pill-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          pillCustomBuilding.querySelectorAll('.pill-option').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const placement = btn.dataset.val;
+          this.app.setCustomBuildingPlacement(placement);
+        });
+      });
+    }
 
     // Target tracking cancellation button
     const btnCancelTrack = document.getElementById('btn-cancel-track');
@@ -165,26 +178,47 @@ export class StressPanel {
       });
     }
 
-    const btnToggleHud = document.getElementById('btn-toggle-hud');
+    // --- Collapsible Performance Monitor HUD ---
     const statsHud = document.getElementById('stats-hud');
-    if (btnToggleHud && statsHud) {
-      btnToggleHud.addEventListener('click', () => {
+    const btnCollapseHud = document.getElementById('btn-collapse-hud');
+    const hudHeader = document.getElementById('hud-header-toggle');
+
+    if (statsHud) {
+      const toggleHud = (e) => {
+        if (e) e.stopPropagation();
         statsHud.classList.toggle('collapsed');
-        btnToggleHud.classList.toggle('active');
-      });
+        const isCollapsed = statsHud.classList.contains('collapsed');
+        if (btnCollapseHud) btnCollapseHud.textContent = isCollapsed ? '+' : '−';
+      };
+      if (btnCollapseHud) btnCollapseHud.addEventListener('click', toggleHud);
+      if (hudHeader) hudHeader.addEventListener('click', toggleHud);
     }
 
-    const btnToggleDrawer = document.getElementById('btn-toggle-drawer');
-    const drawerHandle = document.getElementById('drawer-toggle-handle');
+    // --- Collapsible Bottom Simulation Controls Bar ---
     const bottomBar = document.getElementById('bottom-controls-bar');
-    const toggleDrawer = () => {
-      if (bottomBar) {
-        bottomBar.classList.toggle('expanded');
-        if (btnToggleDrawer) btnToggleDrawer.classList.toggle('active');
-      }
+    const btnCollapseControls = document.getElementById('btn-collapse-controls');
+    const controlsHeader = document.getElementById('controls-bar-header');
+    const summarySpan = document.getElementById('collapsed-controls-summary');
+
+    const updateControlsSummary = () => {
+      if (!summarySpan) return;
+      const peds = document.getElementById('lbl-pedestrians')?.textContent || '1,500';
+      const cars = document.getElementById('lbl-vehicles')?.textContent || '300';
+      const sizeActive = document.querySelector('#pill-city-size .pill-option.active');
+      const sizeText = sizeActive ? sizeActive.textContent.split(' ')[0] : 'Medium';
+      summarySpan.textContent = `${peds} Peds • ${cars} Cars • ${sizeText}`;
     };
 
-    if (btnToggleDrawer) btnToggleDrawer.addEventListener('click', toggleDrawer);
-    if (drawerHandle) drawerHandle.addEventListener('click', toggleDrawer);
+    if (bottomBar) {
+      const toggleControls = (e) => {
+        if (e) e.stopPropagation();
+        bottomBar.classList.toggle('collapsed');
+        const isCollapsed = bottomBar.classList.contains('collapsed');
+        if (btnCollapseControls) btnCollapseControls.textContent = isCollapsed ? '+' : '−';
+        if (isCollapsed) updateControlsSummary();
+      };
+      if (btnCollapseControls) btnCollapseControls.addEventListener('click', toggleControls);
+      if (controlsHeader) controlsHeader.addEventListener('click', toggleControls);
+    }
   }
 }
