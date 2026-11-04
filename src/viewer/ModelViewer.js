@@ -25,6 +25,10 @@ export class ModelViewer {
     this.scaleZ = 1.0;
     this.isGizmoActive = false;
 
+    // Category & Model state
+    this.currentCategory = 'buildings'; // 'buildings' | 'cars'
+    this.activeCarType = 'sedan';
+
     this.initScene();
     this.initCameraAndControls();
     this.initTransformControls();
@@ -144,10 +148,20 @@ export class ModelViewer {
     viewerOverlay.innerHTML = `
       <!-- Viewer Sidebar: Model List & File Actions -->
       <div class="viewer-sidebar glass-panel" id="viewer-sidebar">
+        <!-- Category Switcher: Buildings vs Cars -->
+        <div class="viewer-category-tabs">
+          <button class="viewer-cat-btn active" id="btn-cat-buildings" title="Inspect Architectural 3D Models">
+            🏢 Buildings
+          </button>
+          <button class="viewer-cat-btn" id="btn-cat-cars" title="Inspect & Drive 3D Vehicle Models">
+            🚗 Vehicles
+          </button>
+        </div>
+
         <div class="viewer-section-title" id="viewer-sidebar-header" style="cursor: pointer;" title="Click to Collapse / Expand Sidebar">
-          <span>📁 Models in Project</span>
+          <span id="viewer-sidebar-title-text">📁 Building Models</span>
           <div style="display: flex; align-items: center; gap: 6px;">
-            <button id="btn-refresh-models" class="btn-icon-tiny" title="Refresh folder">🔄</button>
+            <button id="btn-refresh-models" class="btn-icon-tiny" title="Refresh list">🔄</button>
             <button id="btn-collapse-viewer-sidebar" class="btn-collapse-icon" title="Collapse / Expand Sidebar">−</button>
           </div>
         </div>
@@ -159,10 +173,10 @@ export class ModelViewer {
 
         <!-- Drag & Drop Upload Zone -->
         <div class="drop-zone" id="viewer-drop-zone">
-          <span style="font-size: 20px;">📥</span>
-          <div style="font-size: 11px; font-weight: 600;">Drop 3D file here</div>
-          <div style="font-size: 10px; color: #94a3b8;">Supports .obj, .gltf, .glb</div>
-          <input type="file" id="viewer-file-input" accept=".obj,.gltf,.glb" style="display: none;" />
+          <span style="font-size: 20px;" id="drop-zone-icon">📥</span>
+          <div style="font-size: 11px; font-weight: 600;" id="drop-zone-text">Drop 3D file here</div>
+          <div style="font-size: 10px; color: #94a3b8;" id="drop-zone-sub">Supports .obj, .gltf, .glb</div>
+          <input type="file" id="viewer-file-input" accept=".obj,.gltf,.glb,.blend" style="display: none;" />
           <button id="btn-browse-file" class="btn-subtle" style="margin-top: 6px; font-size: 10px; padding: 3px 8px;">Browse Local</button>
         </div>
 
@@ -235,17 +249,38 @@ export class ModelViewer {
           <!-- Populated dynamically -->
         </div>
 
-        <!-- Custom Facade Color Tint -->
-        <div class="color-picker-row" style="background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 6px;">
-          <label for="color-viewer-tint">Glass Tint:</label>
+        <!-- Custom Facade Color Tint (Buildings) -->
+        <div class="color-picker-row" id="color-picker-buildings" style="background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 6px;">
+          <label for="color-viewer-tint">Glass:</label>
           <input type="color" id="color-viewer-tint" value="#38bdf8" />
           <label for="color-viewer-facade" style="margin-left: 8px;">Facade:</label>
           <input type="color" id="color-viewer-facade" value="#f1f5f9" />
         </div>
 
+        <!-- Custom Paint & Palette (Vehicles) -->
+        <div class="vehicle-paint-box" id="color-picker-cars" style="display: none; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <label for="color-viewer-car-paint" style="font-size: 11px; font-weight: 700; color: #38bdf8;">🎨 Body Paint:</label>
+            <input type="color" id="color-viewer-car-paint" value="#2563eb" style="width: 32px; height: 22px; cursor: pointer; border: none; border-radius: 4px; background: transparent;" />
+            <label for="color-viewer-car-tint" style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-left: 8px;">Glass:</label>
+            <input type="color" id="color-viewer-car-tint" value="#38bdf8" style="width: 32px; height: 22px; cursor: pointer; border: none; border-radius: 4px; background: transparent;" />
+          </div>
+          <!-- Quick Paint Swatches -->
+          <div class="car-swatch-row" id="car-swatches" style="display: flex; gap: 6px; justify-content: space-between;">
+            <span class="car-swatch active" data-color="#2563eb" style="background: #2563eb;" title="Royal Blue"></span>
+            <span class="car-swatch" data-color="#e11d48" style="background: #e11d48;" title="Crimson Red"></span>
+            <span class="car-swatch" data-color="#0f172a" style="background: #0f172a;" title="Stealth Black"></span>
+            <span class="car-swatch" data-color="#f8fafc" style="background: #f8fafc;" title="Pearl White"></span>
+            <span class="car-swatch" data-color="#eab308" style="background: #eab308;" title="Taxi Yellow"></span>
+            <span class="car-swatch" data-color="#059669" style="background: #059669;" title="Emerald Green"></span>
+            <span class="car-swatch" data-color="#ea580c" style="background: #ea580c;" title="Burnt Orange"></span>
+            <span class="car-swatch" data-color="#8b5cf6" style="background: #8b5cf6;" title="Cyber Violet"></span>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div style="display: flex; gap: 6px; margin-top: 4px;">
-          <button id="btn-use-in-city" class="btn-primary" style="flex: 1; font-weight: 700; padding: 8px;">
+          <button id="btn-use-in-city" class="btn-primary" style="flex: 1; font-weight: 700; padding: 8px;" title="Apply this model to City simulation">
             🏙️ Use in City
           </button>
           <button id="btn-viewer-snapshot" class="btn-secondary" style="padding: 8px 12px;" title="Save high-res PNG snapshot">
@@ -291,6 +326,52 @@ export class ModelViewer {
           <button class="viewer-tool-btn" id="btn-viewer-reset" title="Reset Camera">🔄 Reset</button>
         </div>
       </div>
+
+      <!-- Loading Popup Modal -->
+      <div id="viewer-model-loader" class="viewer-loader-modal" style="display: none;">
+        <div class="viewer-loader-card glass-panel">
+          <div class="v-spinner-ring">
+            <span id="viewer-loader-icon" class="v-spinner-icon">📦</span>
+          </div>
+          <div class="v-loader-title" id="viewer-loader-title">Loading 3D Model...</div>
+          <div class="v-loader-sub" id="viewer-loader-filename">Building_1.glb</div>
+          <div class="v-loader-track">
+            <div class="v-loader-bar" id="viewer-loader-bar" style="width: 0%;"></div>
+          </div>
+          <div class="v-loader-stats">
+            <span id="viewer-loader-pct">0%</span>
+            <span id="viewer-loader-bytes">Streaming geometry...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blender .blend Compatibility Warning Modal -->
+      <div id="viewer-blend-modal" class="viewer-loader-modal" style="display: none;">
+        <div class="viewer-loader-card glass-panel" style="max-width: 440px; text-align: left; padding: 22px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <span style="font-size: 26px;">⚠️</span>
+            <div>
+              <div style="font-size: 14px; font-weight: 800; color: #f59e0b;">Blender .blend Format Notice</div>
+              <div style="font-size: 11px; color: #94a3b8;">WebGL browsers cannot load raw .blend project files</div>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
+            <b>Cars.blend</b> is an authoring project file for Blender. Three.js and web browsers require standard 3D web formats: <b>.glb</b> or <b>.gltf</b>.
+            <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 10px; margin-top: 8px; border-left: 3px solid #38bdf8;">
+              <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px;">To use your Blender car:</div>
+              1. Open <code>Cars.blend</code> in Blender<br>
+              2. Go to <b>File &gt; Export &gt; glTF 2.0 (.glb)</b><br>
+              3. Drag and drop the exported <code>.glb</code> file right here!
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #34d399; margin-bottom: 14px; background: rgba(52, 211, 153, 0.1); padding: 8px; border-radius: 6px;">
+            ✨ We've prepared 5 interactive 3D car models (Sedan, Sports GT, SUV/Taxi, CyberTruck, Van) you can inspect, customize, and drive right now!
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button id="btn-close-blend-modal" class="btn-primary" style="padding: 6px 16px; font-size: 12px;">Got it!</button>
+          </div>
+        </div>
+      </div>
     `;
 
     document.body.appendChild(viewerOverlay);
@@ -303,12 +384,28 @@ export class ModelViewer {
     const o = this.overlayElement;
     if (!o) return;
 
+    // Category tabs (Buildings vs Cars)
+    const btnCatBld = o.querySelector('#btn-cat-buildings');
+    const btnCatCars = o.querySelector('#btn-cat-cars');
+    if (btnCatBld) btnCatBld.addEventListener('click', () => this.setCategory('buildings'));
+    if (btnCatCars) btnCatCars.addEventListener('click', () => this.setCategory('cars'));
+
+    // Blend modal close button
+    const btnCloseBlend = o.querySelector('#btn-close-blend-modal');
+    if (btnCloseBlend) {
+      btnCloseBlend.addEventListener('click', () => this.hideBlendWarningModal());
+    }
+
     // Refresh models button
     const btnRefresh = o.querySelector('#btn-refresh-models');
     if (btnRefresh) {
       btnRefresh.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.refreshModelsList();
+        if (this.currentCategory === 'buildings') {
+          this.refreshModelsList();
+        } else {
+          this.refreshCarsList();
+        }
       });
     }
 
@@ -337,7 +434,12 @@ export class ModelViewer {
       btnBrowse.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
-          this.loadModelFromSource(e.target.files[0]);
+          const file = e.target.files[0];
+          if (file.name.toLowerCase().endsWith('.blend')) {
+            this.showBlendWarningModal();
+          } else {
+            this.loadModelFromSource(file);
+          }
         }
       });
     }
@@ -417,13 +519,11 @@ export class ModelViewer {
       btnSnapshot.addEventListener('click', () => this.takeSnapshot());
     }
 
-    // Use in City button (passes customized scale factor)
+    // Primary action button (Use in City for buildings / Set as Traffic Car for vehicles)
     const btnUseInCity = o.querySelector('#btn-use-in-city');
     if (btnUseInCity) {
       btnUseInCity.addEventListener('click', () => {
-        if (this.currentModelGroup && this.currentInfo) {
-          this.app.useModelInCity(this.currentInfo.filename, this.currentScale);
-        }
+        this.handlePrimaryAction();
       });
     }
 
@@ -462,7 +562,7 @@ export class ModelViewer {
       }
     });
 
-    // Color Tint Pickers
+    // Color Tint Pickers (Buildings)
     const tintGlass = o.querySelector('#color-viewer-tint');
     if (tintGlass) {
       tintGlass.addEventListener('input', (e) => {
@@ -490,6 +590,32 @@ export class ModelViewer {
         }
       });
     }
+
+    // Vehicle Paint & Tint Controls
+    const paintCar = o.querySelector('#color-viewer-car-paint');
+    if (paintCar) {
+      paintCar.addEventListener('input', (e) => {
+        this.applyCarPaintColor(e.target.value);
+      });
+    }
+
+    const tintCarGlass = o.querySelector('#color-viewer-car-tint');
+    if (tintCarGlass) {
+      tintCarGlass.addEventListener('input', (e) => {
+        this.applyCarGlassColor(e.target.value);
+      });
+    }
+
+    // Vehicle Color Preset Swatches
+    o.querySelectorAll('.car-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        o.querySelectorAll('.car-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        const color = swatch.dataset.color;
+        if (paintCar) paintCar.value = color;
+        this.applyCarPaintColor(color);
+      });
+    });
   }
 
   initDragAndDrop() {
@@ -520,7 +646,12 @@ export class ModelViewer {
       e.stopPropagation();
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
-        this.loadModelFromSource(files[0]);
+        const file = files[0];
+        if (file.name.toLowerCase().endsWith('.blend')) {
+          this.showBlendWarningModal();
+        } else {
+          this.loadModelFromSource(file);
+        }
       }
     });
   }
@@ -637,6 +768,62 @@ export class ModelViewer {
     }
   }
 
+  /**
+   * Switch between Architectural Building models and 3D Vehicles
+   * @param {string} cat - 'buildings' | 'cars'
+   */
+  setCategory(cat) {
+    if (this.currentCategory === cat) return;
+    this.currentCategory = cat;
+
+    const o = this.overlayElement;
+    if (!o) return;
+
+    const btnBld = o.querySelector('#btn-cat-buildings');
+    const btnCars = o.querySelector('#btn-cat-cars');
+    if (btnBld) btnBld.classList.toggle('active', cat === 'buildings');
+    if (btnCars) btnCars.classList.toggle('active', cat === 'cars');
+
+    const header = o.querySelector('#viewer-sidebar-title-text');
+    if (header) {
+      header.textContent = cat === 'buildings' ? '📁 Building Models' : '🚗 Vehicle Showroom';
+    }
+
+    const dropText = o.querySelector('#drop-zone-text');
+    if (dropText) {
+      dropText.textContent = cat === 'buildings' ? 'Drop 3D building (.glb, .gltf, .obj)' : 'Drop 3D vehicle (.glb, .gltf, .obj)';
+    }
+
+    const dropSub = o.querySelector('#drop-zone-sub');
+    if (dropSub) {
+      dropSub.textContent = cat === 'buildings' ? 'Supports .glb, .gltf, .obj' : 'Supports .glb, .gltf, .obj (or drop to test)';
+    }
+
+    const colorBuildings = o.querySelector('#color-picker-buildings');
+    const colorCars = o.querySelector('#color-picker-cars');
+    if (colorBuildings) colorBuildings.style.display = cat === 'buildings' ? 'flex' : 'none';
+    if (colorCars) colorCars.style.display = cat === 'cars' ? 'flex' : 'none';
+
+    const btnUse = o.querySelector('#btn-use-in-city');
+    if (btnUse) {
+      btnUse.innerHTML = cat === 'buildings' ? '🏙️ Use in City' : '🚗 Set as City Traffic Car';
+      btnUse.title = cat === 'buildings' ? 'Place building in city blocks' : 'Apply this vehicle to city traffic simulation';
+    }
+
+    if (cat === 'buildings') {
+      this.refreshModelsList().then(models => {
+        if (!this.currentInfo || this.currentInfo.isCar) {
+          const defaultEntry = models?.find(m => m.filename === 'Building_1.glb') || models?.[0];
+          if (defaultEntry) {
+            this.loadModelFromSource(defaultEntry.url, defaultEntry.filename);
+          }
+        }
+      });
+    } else {
+      this.refreshCarsList();
+    }
+  }
+
   async refreshModelsList() {
     const listContainer = this.overlayElement.querySelector('#viewer-models-list');
     if (!listContainer) return;
@@ -678,13 +865,196 @@ export class ModelViewer {
     return models;
   }
 
+  async refreshCarsList() {
+    const listContainer = this.overlayElement.querySelector('#viewer-models-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+    const cars = this.modelManager.listAvailableCars();
+
+    cars.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'viewer-model-item';
+      const isCurrent = this.currentInfo && (this.currentInfo.carType === c.id || this.currentInfo.filename.toLowerCase().includes(c.id));
+      if (isCurrent) {
+        item.classList.add('active');
+      }
+
+      item.innerHTML = `
+        <div class="m-item-icon">${c.icon}</div>
+        <div class="m-item-details">
+          <div class="m-item-title">${c.name}</div>
+          <div class="m-item-sub">${c.specs}</div>
+        </div>
+        <div class="m-item-badge">CAR</div>
+      `;
+
+      item.addEventListener('click', () => {
+        listContainer.querySelectorAll('.viewer-model-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        this.activeCarType = c.id;
+        this.loadModelFromSource(c.filename, c.name);
+      });
+
+      listContainer.appendChild(item);
+    });
+
+    // If current model is not a car, load the first car by default
+    if (!this.currentInfo || !this.currentInfo.isCar) {
+      const firstCar = cars[0];
+      this.activeCarType = firstCar.id;
+      this.loadModelFromSource(firstCar.filename, firstCar.name);
+    }
+  }
+
+  /**
+   * Primary action: Use in City as custom building OR apply vehicle to City traffic fleet
+   */
+  handlePrimaryAction() {
+    if (this.currentCategory === 'buildings') {
+      if (this.currentModelGroup && this.currentInfo) {
+        this.app.useModelInCity(this.currentInfo.filename, this.currentScale);
+      }
+    } else {
+      // Vehicle mode: Apply this car to city traffic fleet!
+      const carId = this.currentInfo?.carType || this.activeCarType || 'sedan';
+      this.app.traffic.setVehicleType(carId);
+
+      // If custom paint color was selected, apply body color to traffic material
+      const paintInp = this.overlayElement.querySelector('#color-viewer-car-paint');
+      if (paintInp && this.app.traffic.carMaterial) {
+        this.app.traffic.carMaterial.color.set(paintInp.value);
+        this.app.traffic.carMaterial.needsUpdate = true;
+      }
+
+      const carName = this.currentInfo?.filename || carId;
+      this.showToast(`🚗 Applied ${carName} to 300 active city vehicles!`);
+
+      // Switch to City view so user can watch their customized fleet cruising!
+      setTimeout(() => {
+        this.app.switchTab('city');
+        const firstCar = this.app.traffic.getVehicle(0);
+        if (firstCar) {
+          this.app.cameraController.setTrackingTarget(firstCar, new THREE.Vector3(0, 6, 14));
+          this.app.showTargetTracker(`🚗 ${carName} (City Traffic Fleet)`, `Speed: ${(firstCar.speed * 3.6).toFixed(0)} km/h | Active Fleet`);
+        }
+      }, 400);
+    }
+  }
+
+  applyCarPaintColor(hex) {
+    if (!this.currentModelGroup) return;
+    const col = new THREE.Color(hex);
+    this.currentModelGroup.traverse(child => {
+      if (child.isMesh && child.userData.isBody && child.material) {
+        child.material.color.copy(col);
+        child.material.needsUpdate = true;
+      }
+    });
+  }
+
+  applyCarGlassColor(hex) {
+    if (!this.currentModelGroup) return;
+    const col = new THREE.Color(hex);
+    this.currentModelGroup.traverse(child => {
+      if (child.isMesh && child.userData.isGlass && child.material) {
+        child.material.color.copy(col);
+        child.material.needsUpdate = true;
+      }
+    });
+  }
+
+  showLoading(title, filename, icon = '📦') {
+    const loader = this.overlayElement.querySelector('#viewer-model-loader');
+    if (!loader) return;
+    const elTitle = loader.querySelector('#viewer-loader-title');
+    const elSub = loader.querySelector('#viewer-loader-filename');
+    const elIcon = loader.querySelector('#viewer-loader-icon');
+    const elBar = loader.querySelector('#viewer-loader-bar');
+    const elPct = loader.querySelector('#viewer-loader-pct');
+    const elBytes = loader.querySelector('#viewer-loader-bytes');
+
+    if (elTitle) elTitle.textContent = title;
+    if (elSub) elSub.textContent = filename;
+    if (elIcon) elIcon.textContent = icon;
+    if (elBar) elBar.style.width = '0%';
+    if (elPct) elPct.textContent = '0%';
+    if (elBytes) elBytes.textContent = 'Initializing 3D geometry...';
+
+    loader.style.display = 'flex';
+    loader.classList.add('visible');
+  }
+
+  updateLoadingProgress(percent, loaded, total) {
+    const loader = this.overlayElement.querySelector('#viewer-model-loader');
+    if (!loader) return;
+    const elBar = loader.querySelector('#viewer-loader-bar');
+    const elPct = loader.querySelector('#viewer-loader-pct');
+    const elBytes = loader.querySelector('#viewer-loader-bytes');
+
+    const pct = Math.min(100, Math.max(0, percent || 0));
+    if (elBar) elBar.style.width = `${pct}%`;
+    if (elPct) elPct.textContent = `${pct}%`;
+    if (elBytes) {
+      if (total && total > 0) {
+        const loadedMB = (loaded / (1024 * 1024)).toFixed(1);
+        const totalMB = (total / (1024 * 1024)).toFixed(1);
+        elBytes.textContent = `${loadedMB} MB / ${totalMB} MB (${pct}%)`;
+      } else {
+        elBytes.textContent = 'Optimizing PBR shaders & buffers...';
+      }
+    }
+  }
+
+  hideLoading() {
+    const loader = this.overlayElement.querySelector('#viewer-model-loader');
+    if (loader) {
+      loader.classList.remove('visible');
+      setTimeout(() => {
+        loader.style.display = 'none';
+      }, 250);
+    }
+  }
+
+  showBlendWarningModal() {
+    const modal = this.overlayElement.querySelector('#viewer-blend-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.classList.add('visible');
+    }
+  }
+
+  hideBlendWarningModal() {
+    const modal = this.overlayElement.querySelector('#viewer-blend-modal');
+    if (modal) {
+      modal.classList.remove('visible');
+      modal.style.display = 'none';
+    }
+  }
+
   async loadModelFromSource(source, name = '') {
+    const isFile = source instanceof File || source instanceof Blob;
+    const modelName = name || (isFile ? source.name : String(source).split('/').pop().split('?')[0]);
+    const ext = modelName.split('.').pop().toLowerCase();
+
+    if (ext === 'blend') {
+      this.showBlendWarningModal();
+      return;
+    }
+
+    const isCar = ext === 'car' || modelName.includes('.car') || this.currentCategory === 'cars';
+    const icon = isCar ? '🚗' : '🏢';
+    this.showLoading(`Loading ${isCar ? 'Vehicle Model' : '3D Model'}...`, modelName, icon);
+
     try {
-      this.showToast('Loading 3D model...');
-      const { model, info } = await this.modelManager.loadModel(source, name);
+      const { model, info } = await this.modelManager.loadModel(source, name, (progress) => {
+        this.updateLoadingProgress(progress.percent, progress.loaded, progress.total);
+      });
       this.displayModel(model, info);
+      this.hideLoading();
       this.showToast(`Loaded ${info.filename} successfully!`);
     } catch (err) {
+      this.hideLoading();
       console.error('Failed to load model:', err);
       this.showToast(`Error: ${err.message}`);
     }
@@ -720,6 +1090,18 @@ export class ModelViewer {
 
     // Apply shading mode
     this.setShadingMode(this.displayMode);
+
+    // Sync car color picker if viewing a car
+    if (info.isCar) {
+      const paintInput = this.overlayElement.querySelector('#color-viewer-car-paint');
+      if (paintInput) {
+        modelGroup.traverse(c => {
+          if (c.isMesh && c.userData.isBody && c.material && c.material.color) {
+            paintInput.value = '#' + c.material.color.getHexString();
+          }
+        });
+      }
+    }
 
     // Update stats UI & submesh list
     this.updateStatsUI(info);
@@ -901,14 +1283,18 @@ export class ModelViewer {
         this.scene.environment = this.app.envMap;
       }
       this.controls.enabled = true;
-      this.refreshModelsList().then((models) => {
-        if (!this.currentModelGroup) {
-          const defaultEntry = models?.find(m => m.filename === 'Building_1.glb') || models?.[0];
-          const url = defaultEntry ? defaultEntry.url : '/models/Building_1.glb?v=2';
-          const filename = defaultEntry ? defaultEntry.filename : 'Building_1.glb';
-          this.loadModelFromSource(url, filename);
-        }
-      });
+      if (this.currentCategory === 'cars') {
+        this.refreshCarsList();
+      } else {
+        this.refreshModelsList().then((models) => {
+          if (!this.currentModelGroup || this.currentInfo?.isCar) {
+            const defaultEntry = models?.find(m => m.filename === 'Building_1.glb') || models?.[0];
+            const url = defaultEntry ? defaultEntry.url : '/models/Building_1.glb?v=2';
+            const filename = defaultEntry ? defaultEntry.filename : 'Building_1.glb';
+            this.loadModelFromSource(url, filename);
+          }
+        });
+      }
       if (this.currentModelGroup) {
         this.fitModelToView();
       }

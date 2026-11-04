@@ -49,6 +49,10 @@ class CityApp {
     this.initViewTabs();
     this.setupResizeListener();
 
+    // Generate baseline procedural city immediately so ground, roads, and blocks exist right away (prevents white screen)
+    this.rebuildCity(this.city.gridSize);
+    this.updateCityLoader('City infrastructure generated. Streaming 3D assets...', 15, 'Grid Ready', 2);
+
     // Load custom building model and generate initial city
     this.initBuildingModel();
 
@@ -57,18 +61,73 @@ class CityApp {
     requestAnimationFrame(this.animate);
   }
 
+  updateCityLoader(statusText, percent, bytesText, activeStep = 2) {
+    const loader = document.getElementById('city-loader');
+    if (!loader) return;
+    const txtStatus = document.getElementById('loader-status-text');
+    const bar = document.getElementById('loader-progress-bar');
+    const txtPct = document.getElementById('loader-progress-percent');
+    const txtBytes = document.getElementById('loader-progress-bytes');
+
+    if (txtStatus && statusText) txtStatus.textContent = statusText;
+    if (bar) bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+    if (txtPct) txtPct.textContent = `${Math.min(100, Math.max(0, Math.round(percent)))}%`;
+    if (txtBytes && bytesText) txtBytes.textContent = bytesText;
+
+    // Steps
+    for (let s = 1; s <= 3; s++) {
+      const stepEl = document.getElementById(`l-step-${s}`);
+      if (stepEl) {
+        stepEl.classList.toggle('active', s === activeStep);
+        stepEl.classList.toggle('done', s < activeStep);
+      }
+    }
+  }
+
+  hideCityLoader() {
+    const loader = document.getElementById('city-loader');
+    if (loader) {
+      loader.classList.add('fade-out');
+      setTimeout(() => {
+        loader.style.display = 'none';
+      }, 550);
+    }
+  }
+
   async initBuildingModel() {
     try {
+      this.updateCityLoader('Locating 3D architecture assets (Building_1.glb)...', 20, 'Scanning models', 2);
       const models = await this.modelManager.listAvailableModels();
       const defaultEntry = models.find(m => m.filename === 'Building_1.glb') || models[0];
       const url = defaultEntry ? defaultEntry.url : '/models/Building_1.glb?v=2';
       const filename = defaultEntry ? defaultEntry.filename : 'Building_1.glb';
-      const { model, info } = await this.modelManager.loadModel(url, filename);
+
+      const { model, info } = await this.modelManager.loadModel(url, filename, (progress) => {
+        const loadedMB = (progress.loaded / (1024 * 1024)).toFixed(1);
+        const totalMB = progress.total ? (progress.total / (1024 * 1024)).toFixed(1) : '36.6';
+        const pct = 20 + Math.round((progress.percent || 0) * 0.75); // 20% -> 95%
+        this.updateCityLoader(
+          `Downloading ${filename}...`,
+          pct,
+          `${loadedMB} MB / ${totalMB} MB (${progress.percent}%)`,
+          2
+        );
+      });
+
+      this.updateCityLoader('Placing 3D architecture across metropolis blocks...', 96, 'Integrating geometry', 2);
       this.city.setCustomBuilding(model, info, 'prominent');
+      this.rebuildCity(this.city.gridSize);
+
+      this.updateCityLoader('Metropolis ready! Launching simulation...', 100, '3D World Initialized', 3);
+      setTimeout(() => {
+        this.hideCityLoader();
+      }, 400);
     } catch (e) {
       console.warn('Initial load of Building_1.glb failed:', e);
-    } finally {
-      this.rebuildCity(this.city.gridSize);
+      this.updateCityLoader('Simulation ready (Procedural Mode)', 100, 'Ready', 3);
+      setTimeout(() => {
+        this.hideCityLoader();
+      }, 400);
     }
   }
 

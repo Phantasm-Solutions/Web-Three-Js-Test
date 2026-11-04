@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CarModelFactory } from '../models/CarModelFactory.js';
 
 export class TrafficManager {
   constructor(scene, cityGenerator) {
@@ -8,6 +9,7 @@ export class TrafficManager {
     this.vehicles = [];
     this.maxCount = 5000;
     this.activeCount = 300;
+    this.currentVehicleType = 'sedan';
 
     this.group = new THREE.Group();
     this.group.name = 'TrafficSimulation';
@@ -26,7 +28,7 @@ export class TrafficManager {
     ];
 
     this.dummy = new THREE.Object3D();
-    this.carGeometry = this.createCarGeometry();
+    this.carGeometry = this.createCarGeometry(this.currentVehicleType);
     this.carMaterial = new THREE.MeshStandardMaterial({
       roughness: 0.35,
       metalness: 0.7
@@ -36,51 +38,41 @@ export class TrafficManager {
     this.initPool();
   }
 
-  createCarGeometry() {
-    // Stylized modern car: Chassis + Cabin + Wheels + Lights
-    const chassisGeo = new THREE.BoxGeometry(2.0, 0.7, 4.4);
-    chassisGeo.translate(0, 0.55, 0);
+  createCarGeometry(type = 'sedan') {
+    return CarModelFactory.createTrafficGeometry(type);
+  }
 
-    const cabinGeo = new THREE.BoxGeometry(1.7, 0.65, 2.3);
-    cabinGeo.translate(0, 1.2, -0.2);
+  /**
+   * Switch the entire traffic fleet geometry to a new vehicle type
+   * @param {string} type - 'sedan' | 'sports' | 'suv' | 'truck' | 'van'
+   */
+  setVehicleType(type = 'sedan') {
+    this.currentVehicleType = type;
+    const newGeo = this.createCarGeometry(type);
+    if (this.instancedMesh) {
+      const oldGeo = this.instancedMesh.geometry;
+      this.instancedMesh.geometry = newGeo;
+      if (oldGeo && oldGeo !== newGeo) {
+        oldGeo.dispose();
+      }
+      this.carGeometry = newGeo;
+      this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+  }
 
-    // Front headlights
-    const hlLeft = new THREE.BoxGeometry(0.3, 0.15, 0.1);
-    hlLeft.translate(-0.7, 0.65, 2.2);
-
-    const hlRight = new THREE.BoxGeometry(0.3, 0.15, 0.1);
-    hlRight.translate(0.7, 0.65, 2.2);
-
-    // Wheels (4 cylinders)
-    const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 10);
-    wheelGeo.rotateZ(Math.PI / 2);
-
-    const wFL = wheelGeo.clone(); wFL.translate(-0.95, 0.38, 1.3);
-    const wFR = wheelGeo.clone(); wFR.translate(0.95, 0.38, 1.3);
-    const wRL = wheelGeo.clone(); wRL.translate(-0.95, 0.38, -1.3);
-    const wRR = wheelGeo.clone(); wRR.translate(0.95, 0.38, -1.3);
-
-    const geos = [chassisGeo, cabinGeo, hlLeft, hlRight, wFL, wFR, wRL, wRR];
-    let totalVerts = 0;
-    geos.forEach(g => totalVerts += g.attributes.position.count);
-
-    const posArray = new Float32Array(totalVerts * 3);
-    const normArray = new Float32Array(totalVerts * 3);
-    let offset = 0;
-
-    geos.forEach(g => {
-      const p = g.attributes.position.array;
-      const n = g.attributes.normal.array;
-      posArray.set(p, offset * 3);
-      normArray.set(n, offset * 3);
-      offset += g.attributes.position.count;
-    });
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-    geo.setAttribute('normal', new THREE.BufferAttribute(normArray, 3));
-    geo.computeVertexNormals();
-    return geo;
+  /**
+   * Set custom car geometry (e.g. from imported GLB/OBJ)
+   */
+  setCustomGeometry(geometry) {
+    if (!geometry || !this.instancedMesh) return;
+    this.currentVehicleType = 'custom';
+    const oldGeo = this.instancedMesh.geometry;
+    this.instancedMesh.geometry = geometry;
+    if (oldGeo && oldGeo !== geometry) {
+      oldGeo.dispose();
+    }
+    this.carGeometry = geometry;
+    this.instancedMesh.instanceMatrix.needsUpdate = true;
   }
 
   initPool() {

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { CarModelFactory } from './CarModelFactory.js';
 
 export class ModelManager {
   constructor() {
@@ -47,28 +48,56 @@ export class ModelManager {
   }
 
   /**
-   * Load a 3D model by URL or File object
+   * List available procedural & modular 3D vehicles
    */
-  async loadModel(source, name = '') {
+  listAvailableCars() {
+    return CarModelFactory.getCarList();
+  }
+
+  /**
+   * Load a 3D model by URL, File object, or car identifier
+   * @param {string|File|Blob} source
+   * @param {string} name
+   * @param {Function} onProgress - Progress callback ({ loaded, total, percent })
+   */
+  async loadModel(source, name = '', onProgress = null) {
     const isFile = source instanceof File || source instanceof Blob;
     const url = isFile ? URL.createObjectURL(source) : source;
     const modelName = name || (isFile ? source.name : source.split('/').pop().split('?')[0]);
     const ext = modelName.split('.').pop().toLowerCase();
 
+    // Check for Blender .blend files
+    if (ext === 'blend') {
+      throw new Error(
+        'Blender (.blend) is a proprietary source project format. WebGL browsers require standard 3D web formats (.glb or .gltf). Please export via File > Export > glTF 2.0 (.glb) in Blender.'
+      );
+    }
+
+    // Check for built-in car models
+    if (ext === 'car' || modelName.endsWith('.car')) {
+      const carType = modelName.replace('.car', '').toLowerCase().replace(/_model/g, '');
+      const { model, info } = CarModelFactory.createViewerCar(carType);
+      this.activeModel = model;
+      this.activeModelInfo = info;
+      if (onProgress) onProgress({ loaded: 100, total: 100, percent: 100 });
+      return { model: model.clone(true), info };
+    }
+
     if (!isFile && this.cache.has(url)) {
       const cached = this.cache.get(url);
       this.activeModel = cached.template;
       this.activeModelInfo = cached.info;
+      if (onProgress) onProgress({ loaded: 100, total: 100, percent: 100 });
       return { model: cached.template.clone(true), info: cached.info };
     }
 
     let rawGroup;
     if (ext === 'obj') {
-      rawGroup = await this.loadOBJ(url);
+      rawGroup = await this.loadOBJ(url, onProgress);
     } else if (ext === 'gltf' || ext === 'glb') {
-      rawGroup = await this.loadGLTF(url);
+      rawGroup = await this.loadGLTF(url, onProgress);
     } else {
-      throw new Error(`Unsupported model format: .${ext}`);
+      throw new Error(`Unsupported model format: .${ext}. Please use .glb, .gltf, or .obj.`);
     }
 
     // Enhance materials, geometry & compute metadata
@@ -84,23 +113,37 @@ export class ModelManager {
     return { model: model.clone(true), info };
   }
 
-  loadOBJ(url) {
+  loadOBJ(url, onProgress) {
     return new Promise((resolve, reject) => {
       this.objLoader.load(
         url,
         (obj) => resolve(obj),
-        undefined,
+        (xhr) => {
+          if (onProgress && xhr.total) {
+            const pct = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+            onProgress({ loaded: xhr.loaded, total: xhr.total, percent: pct });
+          } else if (onProgress && xhr.loaded) {
+            onProgress({ loaded: xhr.loaded, total: 0, percent: 50 });
+          }
+        },
         (err) => reject(err)
       );
     });
   }
 
-  loadGLTF(url) {
+  loadGLTF(url, onProgress) {
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         url,
         (gltf) => resolve(gltf.scene || gltf.scenes[0]),
-        undefined,
+        (xhr) => {
+          if (onProgress && xhr.total) {
+            const pct = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+            onProgress({ loaded: xhr.loaded, total: xhr.total, percent: pct });
+          } else if (onProgress && xhr.loaded) {
+            onProgress({ loaded: xhr.loaded, total: 0, percent: 50 });
+          }
+        },
         (err) => reject(err)
       );
     });

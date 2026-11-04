@@ -10,6 +10,47 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- City Simulator Full-Screen Loading Screen Overlay -->
+  <div id="city-loader" class="city-loader-overlay">
+    <div class="loader-content glass-panel">
+      <div class="loader-brand">
+        <div class="loader-spinner-ring">
+          <div class="spinner-core">🏙️</div>
+        </div>
+        <div class="loader-title">Metropolis 3D Simulation</div>
+        <div class="loader-subtitle" id="loader-status-text">Connecting & Initializing 3D Assets...</div>
+      </div>
+
+      <div class="loader-progress-track">
+        <div class="loader-progress-bar" id="loader-progress-bar" style="width: 0%;"></div>
+      </div>
+
+      <div class="loader-details">
+        <span id="loader-progress-percent">0%</span>
+        <span id="loader-progress-bytes">Preparing 3D environment...</span>
+      </div>
+
+      <div class="loader-steps">
+        <div class="loader-step active" id="l-step-1">
+          <span class="step-dot"></span>
+          <span>City Infrastructure</span>
+        </div>
+        <div class="loader-step" id="l-step-2">
+          <span class="step-dot"></span>
+          <span>3D Architecture (Building 1)</span>
+        </div>
+        <div class="loader-step" id="l-step-3">
+          <span class="step-dot"></span>
+          <span>Traffic Fleet & Citizens</span>
+        </div>
+      </div>
+
+      <div class="loader-tips">
+        💡 <span>Tip: Use the <b>Model Viewer</b> tab to inspect buildings and 3D car models with parts & color controls!</span>
+      </div>
+    </div>
+  </div>
+
   <!-- WebGL 3D Canvas Container -->
   <div id="canvas-container"></div>
 
@@ -155,6 +196,18 @@
           <div class="slider-container">
             <input type="range" id="slider-vehicles" min="0" max="3000" step="50" value="300" />
             <span class="slider-val" id="lbl-vehicles">300</span>
+          </div>
+        </div>
+
+        <!-- Vehicle Fleet Model Selection in City -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">🚗 Car Model:</span>
+          <div class="pill-select" id="pill-traffic-model">
+            <button class="pill-option active" data-car="sedan" title="Modern Executive Sedan">Sedan</button>
+            <button class="pill-option" data-car="sports" title="Cyber Sports GT Coupe">Sports GT</button>
+            <button class="pill-option" data-car="suv" title="Urban SUV / Taxi">SUV/Taxi</button>
+            <button class="pill-option" data-car="truck" title="Futuristic CyberTruck">CyberTruck</button>
+            <button class="pill-option" data-car="van" title="Electric Delivery Van">Van</button>
           </div>
         </div>
 

@@ -27,6 +27,20 @@ export class StressPanel {
       });
     }
 
+    // City Vehicle Fleet Model
+    const pillTrafficModel = document.getElementById('pill-traffic-model');
+    if (pillTrafficModel) {
+      pillTrafficModel.querySelectorAll('.pill-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          pillTrafficModel.querySelectorAll('.pill-option').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const carType = btn.dataset.car;
+          this.app.traffic.setVehicleType(carType);
+          this.app.showToast(`🚗 City traffic updated to ${btn.textContent}!`);
+        });
+      });
+    }
+
     // City Grid Size
     const pillCitySize = document.getElementById('pill-city-size');
     if (pillCitySize) {
