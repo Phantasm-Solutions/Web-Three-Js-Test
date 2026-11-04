@@ -59,7 +59,11 @@ class CityApp {
 
   async initBuildingModel() {
     try {
-      const { model, info } = await this.modelManager.loadModel('/models/Building_1.glb', 'Building_1.glb');
+      const models = await this.modelManager.listAvailableModels();
+      const defaultEntry = models.find(m => m.filename === 'Building_1.glb') || models[0];
+      const url = defaultEntry ? defaultEntry.url : '/models/Building_1.glb?v=2';
+      const filename = defaultEntry ? defaultEntry.filename : 'Building_1.glb';
+      const { model, info } = await this.modelManager.loadModel(url, filename);
       this.city.setCustomBuilding(model, info, 'prominent');
     } catch (e) {
       console.warn('Initial load of Building_1.glb failed:', e);

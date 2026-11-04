@@ -16,7 +16,7 @@ export class ModelManager {
    */
   async listAvailableModels() {
     try {
-      const res = await fetch('/api/models');
+      const res = await fetch(`/api/models?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const list = await res.json();
         if (Array.isArray(list) && list.length > 0) {
@@ -26,7 +26,7 @@ export class ModelManager {
     } catch (e) {
       // Try static models index for deployed static builds
       try {
-        const res2 = await fetch('/models/index.json');
+        const res2 = await fetch(`/models/index.json?t=${Date.now()}`, { cache: 'no-store' });
         if (res2.ok) {
           const list2 = await res2.json();
           if (Array.isArray(list2) && list2.length > 0) return list2;
@@ -39,7 +39,7 @@ export class ModelManager {
       {
         name: 'Building_1.glb',
         filename: 'Building_1.glb',
-        url: '/models/Building_1.glb',
+        url: '/models/Building_1.glb?v=36652984',
         size: 36652984,
         ext: 'glb'
       }

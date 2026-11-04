@@ -675,6 +675,7 @@ export class ModelViewer {
 
       listContainer.appendChild(item);
     });
+    return models;
   }
 
   async loadModelFromSource(source, name = '') {
@@ -900,10 +901,15 @@ export class ModelViewer {
         this.scene.environment = this.app.envMap;
       }
       this.controls.enabled = true;
-      this.refreshModelsList();
-      if (!this.currentModelGroup) {
-        this.loadModelFromSource('/models/Building_1.glb', 'Building_1.glb');
-      } else {
+      this.refreshModelsList().then((models) => {
+        if (!this.currentModelGroup) {
+          const defaultEntry = models?.find(m => m.filename === 'Building_1.glb') || models?.[0];
+          const url = defaultEntry ? defaultEntry.url : '/models/Building_1.glb?v=2';
+          const filename = defaultEntry ? defaultEntry.filename : 'Building_1.glb';
+          this.loadModelFromSource(url, filename);
+        }
+      });
+      if (this.currentModelGroup) {
         this.fitModelToView();
       }
     } else {

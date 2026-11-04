@@ -26,11 +26,12 @@ export default defineConfig({
               .filter(f => /\.(obj|gltf|glb|fbx|stl|ply|dae)$/i.test(f))
               .map(f => {
                 const stat = fs.statSync(path.join(modelsDir, f));
+                const rev = Math.floor(stat.mtimeMs);
                 return {
                   name: f,
                   filename: f,
                   size: stat.size,
-                  url: `/models/${encodeURIComponent(f)}`,
+                  url: `/models/${encodeURIComponent(f)}?v=${rev}`,
                   ext: path.extname(f).slice(1).toLowerCase(),
                   modified: stat.mtimeMs
                 };
@@ -58,11 +59,12 @@ export default defineConfig({
             .filter(f => /\.(obj|gltf|glb|fbx|stl|ply|dae)$/i.test(f))
             .map(f => {
               const stat = fs.statSync(path.join(srcDir, f));
+              const rev = Math.floor(stat.mtimeMs);
               return {
                 name: f,
                 filename: f,
                 size: stat.size,
-                url: `/models/${encodeURIComponent(f)}`,
+                url: `/models/${encodeURIComponent(f)}?v=${rev}`,
                 ext: path.extname(f).slice(1).toLowerCase(),
                 modified: stat.mtimeMs
               };
@@ -82,7 +84,7 @@ export default defineConfig({
 <IfModule mod_headers.c>
   <FilesMatch "\\.(glb|gltf|obj|json)$">
     Header set Access-Control-Allow-Origin "*"
-    Header set Cache-Control "max-age=604800, public"
+    Header set Cache-Control "no-cache, public, must-revalidate"
   </FilesMatch>
 </IfModule>
 `;
