@@ -212,6 +212,21 @@
           </div>
         </div>
 
+        <!-- Vehicle Fleet Scale Slider & Presets -->
+        <div class="control-group" style="flex: 0 0 auto;">
+          <span class="control-label">📐 Fleet Scale:</span>
+          <div class="slider-container" style="min-width: 120px;">
+            <input type="range" id="slider-car-scale" min="0.3" max="3.0" step="0.05" value="1.0" style="width: 75px;" />
+            <span class="slider-val" id="lbl-car-scale">1.00x</span>
+          </div>
+          <div class="pill-select" id="pill-car-scale-presets" style="margin-left: 4px;">
+            <button class="pill-option" data-scale="0.7">0.7x</button>
+            <button class="pill-option active" data-scale="1.0">1.0x</button>
+            <button class="pill-option" data-scale="1.4">1.4x</button>
+            <button class="pill-option" data-scale="2.0">2.0x</button>
+          </div>
+        </div>
+
         <!-- City Size Selector -->
         <div class="control-group" style="flex: 0 0 auto;">
           <span class="control-label">🏙️ City Size:</span>

@@ -300,11 +300,9 @@ class CityApp {
   rebuildCity(size) {
     this.city.generate(size);
     this.pedestrians.initPool();
+    this.traffic.initVehiclesState();
     if (this.traffic.isGlbLoaded) {
-      this.traffic.initVehiclesState();
       this.traffic.update(0);
-    } else {
-      this.traffic.initProceduralFallback();
     }
     this.statsHUD.resetStats();
   }

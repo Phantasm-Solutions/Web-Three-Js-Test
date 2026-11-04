@@ -119,8 +119,9 @@ export class ModelManager {
   async loadModel(source, name = '', onProgress = null) {
     const isFile = source instanceof File || source instanceof Blob;
     const url = isFile ? URL.createObjectURL(source) : source;
-    const modelName = name || (isFile ? source.name : source.split('/').pop().split('?')[0]);
-    const ext = modelName.split('.').pop().toLowerCase();
+    const sourceFilename = isFile ? source.name : String(source).split('/').pop().split('?')[0];
+    const ext = sourceFilename.includes('.') ? sourceFilename.split('.').pop().toLowerCase() : (name.includes('.') ? name.split('.').pop().toLowerCase() : '');
+    const modelName = name || sourceFilename;
 
     // Check for Blender .blend files
     if (ext === 'blend') {
@@ -130,8 +131,8 @@ export class ModelManager {
     }
 
     // Check for built-in car models
-    if (ext === 'car' || modelName.endsWith('.car')) {
-      const carType = modelName.replace('.car', '').toLowerCase().replace(/_model/g, '');
+    if (ext === 'car' || sourceFilename.endsWith('.car')) {
+      const carType = sourceFilename.replace('.car', '').toLowerCase().replace(/_model/g, '');
       const { model, info } = CarModelFactory.createViewerCar(carType);
       this.activeModel = model;
       this.activeModelInfo = info;
@@ -157,7 +158,8 @@ export class ModelManager {
     }
 
     // Enhance materials, geometry & compute metadata
-    const { model, info } = this.processModel(rawGroup, modelName, isFile ? source.size : null);
+    const { model, info } = this.processModel(rawGroup, sourceFilename, isFile ? source.size : null);
+    info.displayName = modelName;
 
     if (!isFile) {
       this.cache.set(url, { template: model, info });

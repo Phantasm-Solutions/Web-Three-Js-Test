@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { CarModelFactory } from '../models/CarModelFactory.js';
 
 export const GLB_CAR_DEFS = [
   { id: 'car1', name: 'Phantom Cruiser (Car 1)', file: '/models/Car1.glb', targetLength: 4.5, icon: '🚗' },
@@ -19,6 +18,7 @@ export class TrafficManager {
     this.maxCount = 5000;
     this.activeCount = 300;
     this.currentVehicleType = 'mixed'; // 'mixed' | 'car1' | 'car2' | 'car3' | 'car4' | 'car5'
+    this.carScale = 1.0;
 
     this.group = new THREE.Group();
     this.group.name = 'TrafficSimulation';
@@ -29,14 +29,6 @@ export class TrafficManager {
 
     this.carTemplates = []; // [{ id, name, icon, primitives: [{ geometry, material }], instancedMeshes: [] }]
     this.isGlbLoaded = false;
-
-    // Procedural fallback while GLBs are streaming
-    this.carGeometry = CarModelFactory.createTrafficGeometry('sedan');
-    this.carMaterial = new THREE.MeshStandardMaterial({
-      roughness: 0.35,
-      metalness: 0.7
-    });
-    this.instancedMesh = null;
 
     this.palette = [
       new THREE.Color('#e11d48'),
@@ -51,9 +43,8 @@ export class TrafficManager {
     ];
 
     this.initVehiclesState();
-    this.initProceduralFallback();
 
-    // Asynchronously load the 5 GLB cars and transition to real 3D assets
+    // Asynchronously load the 5 GLB cars and build authentic 3D traffic meshes
     this.loadGlbCars();
   }
 
@@ -77,7 +68,7 @@ export class TrafficManager {
         const t = Math.random();
         pos.lerpVectors(lane.start, lane.end, t);
       } else {
-        pos.set((Math.random() - 0.5) * 300, 0.0, (Math.random() - 0.5) * 300);
+        pos.set(0, -999, 0); // Hide off-world if lanes not ready yet
       }
 
       const speed = 10 + Math.random() * 8; // 36 - 65 km/h
@@ -98,28 +89,6 @@ export class TrafficManager {
         carName: 'Car 1'
       });
     }
-  }
-
-  initProceduralFallback() {
-    const maxAlloc = Math.max(this.maxCount, this.activeCount);
-    this.instancedMesh = new THREE.InstancedMesh(this.carGeometry, this.carMaterial, maxAlloc);
-    this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.instancedMesh.castShadow = true;
-    this.instancedMesh.receiveShadow = true;
-    this.group.add(this.instancedMesh);
-
-    for (let i = 0; i < this.activeCount; i++) {
-      this.dummy.position.copy(this.vehicles[i].pos);
-      this.dummy.rotation.set(0, this.vehicles[i].rotY, 0);
-      this.dummy.scale.set(1, 1, 1);
-      this.dummy.updateMatrix();
-      this.instancedMesh.setMatrixAt(i, this.dummy.matrix);
-      this.instancedMesh.setColorAt(i, this.vehicles[i].color);
-    }
-
-    if (this.instancedMesh.instanceColor) this.instancedMesh.instanceColor.needsUpdate = true;
-    this.instancedMesh.instanceMatrix.needsUpdate = true;
-    this.instancedMesh.count = this.activeCount;
   }
 
   async loadGlbCars() {
@@ -193,25 +162,14 @@ export class TrafficManager {
   }
 
   rebuildInstancedMeshes() {
-    // 1. Remove and dispose old procedural fallback mesh
-    if (this.instancedMesh) {
-      this.group.remove(this.instancedMesh);
-      this.instancedMesh.dispose();
-      this.instancedMesh = null;
+    // 1. Wipe out any previous meshes to guarantee no standing dummy cars
+    this.clear();
+
+    if (!this.isGlbLoaded || !this.carTemplates || this.carTemplates.length === 0) {
+      return;
     }
 
-    // 2. Remove any previous template instanced meshes
-    for (const tpl of this.carTemplates) {
-      if (tpl.instancedMeshes) {
-        for (const m of tpl.instancedMeshes) {
-          this.group.remove(m);
-          m.dispose();
-        }
-      }
-      tpl.instancedMeshes = [];
-    }
-
-    // 3. Build instanced meshes for each primitive of each car template
+    // 2. Build instanced meshes for each primitive of each of the 5 car templates
     const maxAlloc = Math.max(this.maxCount, this.activeCount);
 
     for (const tpl of this.carTemplates) {
@@ -220,6 +178,7 @@ export class TrafficManager {
         instMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         instMesh.castShadow = true;
         instMesh.receiveShadow = true;
+        instMesh.count = 0; // Starts at 0 until instances are positioned
         instMesh.userData = {
           isTrafficCar: true,
           carId: tpl.id,
@@ -230,24 +189,21 @@ export class TrafficManager {
       }
     }
 
-    // 4. Update initial matrices
+    // 3. Update initial positions
     this.update(0);
+  }
+
+  setCarScale(scale) {
+    this.carScale = Math.max(0.2, Math.min(5.0, parseFloat(scale) || 1.0));
+    if (this.isGlbLoaded) {
+      this.update(0);
+    }
   }
 
   setVehicleType(type = 'mixed') {
     this.currentVehicleType = type;
     if (this.isGlbLoaded) {
       this.update(0);
-    } else {
-      // Fallback procedural
-      const newGeo = CarModelFactory.createTrafficGeometry(type.startsWith('car') ? 'sedan' : type);
-      if (this.instancedMesh) {
-        const oldGeo = this.instancedMesh.geometry;
-        this.instancedMesh.geometry = newGeo;
-        if (oldGeo && oldGeo !== newGeo) oldGeo.dispose();
-        this.carGeometry = newGeo;
-        this.instancedMesh.instanceMatrix.needsUpdate = true;
-      }
     }
   }
 
@@ -258,18 +214,20 @@ export class TrafficManager {
     }
     if (this.isGlbLoaded) {
       this.update(0);
-    } else if (this.instancedMesh) {
-      this.instancedMesh.count = this.activeCount;
     }
   }
 
   update(delta) {
+    if (!this.isGlbLoaded || !this.carTemplates || this.carTemplates.length === 0) {
+      return;
+    }
+
     const lanes = this.city.roadLanes;
     const hasLanes = lanes && lanes.length > 0;
     const count = this.activeCount;
 
     // Instance count trackers for each of the 5 car templates
-    const tplCounts = this.carTemplates ? this.carTemplates.map(() => 0) : [];
+    const tplCounts = this.carTemplates.map(() => 0);
 
     for (let i = 0; i < count; i++) {
       const v = this.vehicles[i];
@@ -278,21 +236,25 @@ export class TrafficManager {
       if (delta > 0) {
         if (hasLanes) {
           const lane = lanes[v.laneIndex];
-          v.pos.x += lane.direction.x * v.speed * delta;
-          v.pos.z += lane.direction.z * v.speed * delta;
+          if (lane) {
+            v.pos.x += lane.direction.x * v.speed * delta;
+            v.pos.z += lane.direction.z * v.speed * delta;
 
-          // Check if car reached lane end
-          const distToEnd = v.pos.distanceTo(lane.end);
-          if (distToEnd < 6.0) {
-            if (Math.random() > 0.4) {
-              v.pos.copy(lane.start);
-            } else {
-              const newLaneIdx = Math.floor(Math.random() * lanes.length);
-              v.laneIndex = newLaneIdx;
-              const newLane = lanes[newLaneIdx];
-              v.dir.copy(newLane.direction);
-              v.rotY = Math.atan2(v.dir.x, v.dir.z);
-              v.pos.copy(newLane.start);
+            // Check if car reached lane end
+            const distToEnd = v.pos.distanceTo(lane.end);
+            if (distToEnd < 6.0) {
+              if (Math.random() > 0.4) {
+                v.pos.copy(lane.start);
+              } else {
+                const newLaneIdx = Math.floor(Math.random() * lanes.length);
+                v.laneIndex = newLaneIdx;
+                const newLane = lanes[newLaneIdx];
+                if (newLane) {
+                  v.dir.copy(newLane.direction);
+                  v.rotY = Math.atan2(v.dir.x, v.dir.z);
+                  v.pos.copy(newLane.start);
+                }
+              }
             }
           }
         } else {
@@ -301,58 +263,48 @@ export class TrafficManager {
         }
       }
 
-      if (this.isGlbLoaded && this.carTemplates.length > 0) {
-        // Choose car model: 'mixed' (alternates Car 1 to 5) or specific 'car1'...'car5'
-        let tplIdx = 0;
-        if (this.currentVehicleType === 'mixed') {
-          tplIdx = v.id % this.carTemplates.length;
-        } else if (this.currentVehicleType.startsWith('car')) {
-          const num = parseInt(this.currentVehicleType.replace('car', ''), 10) - 1;
-          tplIdx = (num >= 0 && num < this.carTemplates.length) ? num : 0;
-        }
+      // Choose car model: 'mixed' (alternates Car 1 to 5) or specific 'car1'...'car5'
+      let tplIdx = 0;
+      if (this.currentVehicleType === 'mixed') {
+        tplIdx = v.id % this.carTemplates.length;
+      } else if (this.currentVehicleType.startsWith('car')) {
+        const num = parseInt(this.currentVehicleType.replace('car', ''), 10) - 1;
+        tplIdx = (num >= 0 && num < this.carTemplates.length) ? num : 0;
+      }
 
-        const tpl = this.carTemplates[tplIdx];
-        const localIdx = tplCounts[tplIdx]++;
-        v.activeTemplateIdx = tplIdx;
-        v.localInstanceIdx = localIdx;
-        v.carName = tpl.name;
+      const tpl = this.carTemplates[tplIdx];
+      const localIdx = tplCounts[tplIdx]++;
+      v.activeTemplateIdx = tplIdx;
+      v.localInstanceIdx = localIdx;
+      v.carName = tpl.name;
 
-        this.dummy.position.copy(v.pos);
-        this.dummy.rotation.set(0, v.rotY, 0);
-        this.dummy.scale.set(1, 1, 1);
-        this.dummy.updateMatrix();
+      this.dummy.position.copy(v.pos);
+      this.dummy.rotation.set(0, v.rotY, 0);
+      this.dummy.scale.set(this.carScale, this.carScale, this.carScale);
+      this.dummy.updateMatrix();
 
-        for (let m = 0; m < tpl.instancedMeshes.length; m++) {
-          tpl.instancedMeshes[m].setMatrixAt(localIdx, this.dummy.matrix);
-        }
-      } else if (this.instancedMesh) {
-        this.dummy.position.copy(v.pos);
-        this.dummy.rotation.set(0, v.rotY, 0);
-        this.dummy.scale.set(1, 1, 1);
-        this.dummy.updateMatrix();
-        this.instancedMesh.setMatrixAt(i, this.dummy.matrix);
+      for (let m = 0; m < tpl.instancedMeshes.length; m++) {
+        tpl.instancedMeshes[m].setMatrixAt(localIdx, this.dummy.matrix);
       }
     }
 
-    // Flush updates to GPU
-    if (this.isGlbLoaded) {
-      for (let c = 0; c < this.carTemplates.length; c++) {
-        const tpl = this.carTemplates[c];
-        const cCount = tplCounts[c] || 0;
+    // Flush updates to GPU and set visible instance counts
+    for (let c = 0; c < this.carTemplates.length; c++) {
+      const tpl = this.carTemplates[c];
+      const cCount = tplCounts[c] || 0;
+      if (tpl.instancedMeshes) {
         for (let m = 0; m < tpl.instancedMeshes.length; m++) {
           const mesh = tpl.instancedMeshes[m];
           mesh.count = cCount;
           mesh.instanceMatrix.needsUpdate = true;
         }
       }
-    } else if (this.instancedMesh) {
-      this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
   }
 
   getRaycastTargets() {
     const targets = [];
-    if (this.isGlbLoaded) {
+    if (this.isGlbLoaded && this.carTemplates) {
       for (const tpl of this.carTemplates) {
         if (tpl.instancedMeshes) {
           for (const m of tpl.instancedMeshes) {
@@ -360,14 +312,12 @@ export class TrafficManager {
           }
         }
       }
-    } else if (this.instancedMesh) {
-      targets.push(this.instancedMesh);
     }
     return targets;
   }
 
   getVehicleFromHit(mesh, instanceId) {
-    if (!this.isGlbLoaded) {
+    if (!this.isGlbLoaded || !this.carTemplates) {
       return this.getVehicle(instanceId);
     }
 
@@ -398,20 +348,25 @@ export class TrafficManager {
   }
 
   clear() {
-    if (this.instancedMesh) {
-      this.group.remove(this.instancedMesh);
-      this.instancedMesh.dispose();
-      this.instancedMesh = null;
+    // Thoroughly remove and dispose all instanced meshes from this.group
+    while (this.group.children.length > 0) {
+      const obj = this.group.children[0];
+      this.group.remove(obj);
+      if (obj.geometry) {
+        obj.geometry.dispose();
+      }
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
+      }
+      if (obj.dispose) obj.dispose();
     }
     if (this.carTemplates) {
       for (const tpl of this.carTemplates) {
-        if (tpl.instancedMeshes) {
-          for (const m of tpl.instancedMeshes) {
-            this.group.remove(m);
-            m.dispose();
-          }
-          tpl.instancedMeshes = [];
-        }
+        tpl.instancedMeshes = [];
       }
     }
   }

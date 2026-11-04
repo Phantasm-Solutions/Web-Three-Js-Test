@@ -148,144 +148,149 @@ export class ModelViewer {
     viewerOverlay.innerHTML = `
       <!-- Viewer Sidebar: Model List & File Actions -->
       <div class="viewer-sidebar glass-panel" id="viewer-sidebar">
-        <!-- Category Switcher: Buildings vs Cars -->
-        <div class="viewer-category-tabs">
-          <button class="viewer-cat-btn active" id="btn-cat-buildings" title="Inspect Architectural 3D Models">
-            🏢 Buildings
-          </button>
-          <button class="viewer-cat-btn" id="btn-cat-cars" title="Inspect & Drive 3D Vehicle Models">
-            🚗 Vehicles
-          </button>
-        </div>
-
-        <div class="viewer-section-title" id="viewer-sidebar-header" style="cursor: pointer;" title="Click to Collapse / Expand Sidebar">
-          <span id="viewer-sidebar-title-text">📁 Building Models</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
+        <!-- Persistent Top Header Bar (Always visible even when collapsed) -->
+        <div class="viewer-sidebar-top-bar" id="viewer-sidebar-top-bar">
+          <div class="viewer-category-tabs">
+            <button class="viewer-cat-btn active" id="btn-cat-buildings" title="Inspect Architectural 3D Models">
+              🏢 Buildings
+            </button>
+            <button class="viewer-cat-btn" id="btn-cat-cars" title="Inspect & Drive 3D Vehicle Models">
+              🚗 Vehicles
+            </button>
+          </div>
+          <div class="viewer-top-actions">
             <button id="btn-refresh-models" class="btn-icon-tiny" title="Refresh list">🔄</button>
             <button id="btn-collapse-viewer-sidebar" class="btn-collapse-icon" title="Collapse / Expand Sidebar">−</button>
           </div>
         </div>
 
-        <!-- Models List -->
-        <div id="viewer-models-list" class="viewer-models-list">
-          <div class="loading-spinner-small">Scanning models...</div>
-        </div>
+        <!-- Collapsible Content Wrapper -->
+        <div class="viewer-sidebar-body" id="viewer-sidebar-body">
+          <div class="viewer-section-title">
+            <span id="viewer-sidebar-title-text">📁 Architectural Models</span>
+          </div>
 
-        <!-- Drag & Drop Upload Zone -->
-        <div class="drop-zone" id="viewer-drop-zone">
-          <span style="font-size: 20px;" id="drop-zone-icon">📥</span>
-          <div style="font-size: 11px; font-weight: 600;" id="drop-zone-text">Drop 3D file here</div>
-          <div style="font-size: 10px; color: #94a3b8;" id="drop-zone-sub">Supports .obj, .gltf, .glb</div>
-          <input type="file" id="viewer-file-input" accept=".obj,.gltf,.glb,.blend" style="display: none;" />
-          <button id="btn-browse-file" class="btn-subtle" style="margin-top: 6px; font-size: 10px; padding: 3px 8px;">Browse Local</button>
-        </div>
+          <!-- Models List -->
+          <div id="viewer-models-list" class="viewer-models-list">
+            <div class="loading-spinner-small">Scanning models...</div>
+          </div>
 
-        <!-- Active Model Stats Card -->
-        <div class="viewer-stats-card">
-          <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;" id="stat-model-name">Building_1.glb</div>
-          <div class="viewer-metric-grid">
-            <div class="v-metric">
-              <span class="v-label">Triangles:</span>
-              <span class="v-val" id="stat-triangles">-</span>
-            </div>
-            <div class="v-metric">
-              <span class="v-label">Vertices:</span>
-              <span class="v-val" id="stat-vertices">-</span>
-            </div>
-            <div class="v-metric">
-              <span class="v-label">Meshes:</span>
-              <span class="v-val" id="stat-meshes">-</span>
-            </div>
-            <div class="v-metric">
-              <span class="v-label">File Size:</span>
-              <span class="v-val" id="stat-filesize">-</span>
-            </div>
+          <!-- Drag & Drop Upload Zone -->
+          <div class="drop-zone" id="viewer-drop-zone">
+            <span style="font-size: 20px;" id="drop-zone-icon">📥</span>
+            <div style="font-size: 11px; font-weight: 600;" id="drop-zone-text">Drop 3D file here</div>
+            <div style="font-size: 10px; color: #94a3b8;" id="drop-zone-sub">Supports .obj, .gltf, .glb</div>
+            <input type="file" id="viewer-file-input" accept=".obj,.gltf,.glb,.blend" style="display: none;" />
+            <button id="btn-browse-file" class="btn-subtle" style="margin-top: 6px; font-size: 10px; padding: 3px 8px;">Browse Local</button>
           </div>
-          <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-family: monospace;" id="stat-dimensions">
-            Dimensions: -
-          </div>
-        </div>
 
-        <!-- Interactive Object Scale Controls -->
-        <div class="viewer-section-title" style="margin-top: 2px;">
-          <span>📏 Object Scale</span>
-          <span id="badge-scale-val" class="mono-badge">1.00x (100%)</span>
-        </div>
-        <div class="scale-ctrl-container">
-          <div class="slider-row">
-            <input type="range" id="slider-model-scale" min="0.1" max="5.0" step="0.05" value="1.0" />
-          </div>
-          <div class="scale-presets-row">
-            <button class="scale-pill-btn" data-scale="0.5">0.5x</button>
-            <button class="scale-pill-btn active" data-scale="1.0">1.0x</button>
-            <button class="scale-pill-btn" data-scale="1.5">1.5x</button>
-            <button class="scale-pill-btn" data-scale="2.0">2.0x</button>
-            <button class="scale-pill-btn" data-scale="3.0">3.0x</button>
-            <button class="scale-pill-btn" id="btn-scale-reset">↺ Reset</button>
-          </div>
-          <!-- Fine-grained Axis Inputs (X, Y, Z) -->
-          <div class="axis-scale-row">
-            <div class="axis-input-wrap">
-              <span class="axis-label" style="color: #ef4444;">X:</span>
-              <input type="number" id="input-scale-x" min="0.05" max="20" step="0.1" value="1.0" class="axis-num-input" />
+          <!-- Active Model Stats Card -->
+          <div class="viewer-stats-card">
+            <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;" id="stat-model-name">Building_1.glb</div>
+            <div class="viewer-metric-grid">
+              <div class="v-metric">
+                <span class="v-label">Triangles:</span>
+                <span class="v-val" id="stat-triangles">-</span>
+              </div>
+              <div class="v-metric">
+                <span class="v-label">Vertices:</span>
+                <span class="v-val" id="stat-vertices">-</span>
+              </div>
+              <div class="v-metric">
+                <span class="v-label">Meshes:</span>
+                <span class="v-val" id="stat-meshes">-</span>
+              </div>
+              <div class="v-metric">
+                <span class="v-label">File Size:</span>
+                <span class="v-val" id="stat-filesize">-</span>
+              </div>
             </div>
-            <div class="axis-input-wrap">
-              <span class="axis-label" style="color: #22c55e;">Y:</span>
-              <input type="number" id="input-scale-y" min="0.05" max="20" step="0.1" value="1.0" class="axis-num-input" />
-            </div>
-            <div class="axis-input-wrap">
-              <span class="axis-label" style="color: #38bdf8;">Z:</span>
-              <input type="number" id="input-scale-z" min="0.05" max="20" step="0.1" value="1.0" class="axis-num-input" />
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-family: monospace;" id="stat-dimensions">
+              Dimensions: -
             </div>
           </div>
-        </div>
 
-        <!-- Sub-mesh / Component Hierarchy Inspector -->
-        <div class="viewer-section-title" style="margin-top: 2px;">
-          <span>🧩 Sub-Meshes & Parts</span>
-          <span id="badge-parts-count" class="mono-badge">0</span>
-        </div>
-        <div id="viewer-submesh-list" class="viewer-submesh-list">
-          <!-- Populated dynamically -->
-        </div>
-
-        <!-- Custom Facade Color Tint (Buildings) -->
-        <div class="color-picker-row" id="color-picker-buildings" style="background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 6px;">
-          <label for="color-viewer-tint">Glass:</label>
-          <input type="color" id="color-viewer-tint" value="#38bdf8" />
-          <label for="color-viewer-facade" style="margin-left: 8px;">Facade:</label>
-          <input type="color" id="color-viewer-facade" value="#f1f5f9" />
-        </div>
-
-        <!-- Custom Paint & Palette (Vehicles) -->
-        <div class="vehicle-paint-box" id="color-picker-cars" style="display: none; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <label for="color-viewer-car-paint" style="font-size: 11px; font-weight: 700; color: #38bdf8;">🎨 Body Paint:</label>
-            <input type="color" id="color-viewer-car-paint" value="#2563eb" style="width: 32px; height: 22px; cursor: pointer; border: none; border-radius: 4px; background: transparent;" />
-            <label for="color-viewer-car-tint" style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-left: 8px;">Glass:</label>
-            <input type="color" id="color-viewer-car-tint" value="#38bdf8" style="width: 32px; height: 22px; cursor: pointer; border: none; border-radius: 4px; background: transparent;" />
+          <!-- Interactive Object Scale Controls -->
+          <div class="viewer-section-title" style="margin-top: 2px;">
+            <span>📏 Object Scale</span>
+            <span id="badge-scale-val" class="mono-badge">1.00x (100%)</span>
           </div>
-          <!-- Quick Paint Swatches -->
-          <div class="car-swatch-row" id="car-swatches" style="display: flex; gap: 6px; justify-content: space-between;">
-            <span class="car-swatch active" data-color="#2563eb" style="background: #2563eb;" title="Royal Blue"></span>
-            <span class="car-swatch" data-color="#e11d48" style="background: #e11d48;" title="Crimson Red"></span>
-            <span class="car-swatch" data-color="#0f172a" style="background: #0f172a;" title="Stealth Black"></span>
-            <span class="car-swatch" data-color="#f8fafc" style="background: #f8fafc;" title="Pearl White"></span>
-            <span class="car-swatch" data-color="#eab308" style="background: #eab308;" title="Taxi Yellow"></span>
-            <span class="car-swatch" data-color="#059669" style="background: #059669;" title="Emerald Green"></span>
-            <span class="car-swatch" data-color="#ea580c" style="background: #ea580c;" title="Burnt Orange"></span>
-            <span class="car-swatch" data-color="#8b5cf6" style="background: #8b5cf6;" title="Cyber Violet"></span>
+          <div class="scale-ctrl-container">
+            <div class="slider-row">
+              <input type="range" id="slider-model-scale" min="0.1" max="5.0" step="0.05" value="1.0" />
+            </div>
+            <div class="scale-presets-row">
+              <button class="scale-pill-btn" data-scale="0.5">0.5x</button>
+              <button class="scale-pill-btn active" data-scale="1.0">1.0x</button>
+              <button class="scale-pill-btn" data-scale="1.5">1.5x</button>
+              <button class="scale-pill-btn" data-scale="2.0">2.0x</button>
+              <button class="scale-pill-btn" data-scale="3.0">3.0x</button>
+              <button class="scale-pill-btn" id="btn-scale-reset">↺ Reset</button>
+            </div>
+            <!-- Fine-grained Axis Inputs (X, Y, Z) -->
+            <div class="axis-scale-row">
+              <div class="axis-input-wrap">
+                <span class="axis-label" style="color: #ef4444;">X:</span>
+                <input type="number" id="input-scale-x" min="0.05" max="20" step="0.1" value="1.0" class="axis-num-input" />
+              </div>
+              <div class="axis-input-wrap">
+                <span class="axis-label" style="color: #22c55e;">Y:</span>
+                <input type="number" id="input-scale-y" min="0.05" max="20" step="0.1" value="1.0" class="axis-num-input" />
+              </div>
+              <div class="axis-input-wrap">
+                <span class="axis-label" style="color: #38bdf8;">Z:</span>
+                <input type="number" id="input-scale-z" min="0.05" max="20" step="0.1" value="1.0" class="axis-num-input" />
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 6px; margin-top: 4px;">
-          <button id="btn-use-in-city" class="btn-primary" style="flex: 1; font-weight: 700; padding: 8px;" title="Apply this model to City simulation">
-            🏙️ Use in City
-          </button>
-          <button id="btn-viewer-snapshot" class="btn-secondary" style="padding: 8px 12px;" title="Save high-res PNG snapshot">
-            📸 Snapshot
-          </button>
+          <!-- Sub-mesh / Component Hierarchy Inspector -->
+          <div class="viewer-section-title" style="margin-top: 2px;">
+            <span>🧩 Sub-Meshes & Parts</span>
+            <span id="badge-parts-count" class="mono-badge">0</span>
+          </div>
+          <div id="viewer-submesh-list" class="viewer-submesh-list">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- Custom Facade Color Tint (Buildings) -->
+          <div class="color-picker-row" id="color-picker-buildings" style="background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 6px;">
+            <label for="color-viewer-tint">Glass:</label>
+            <input type="color" id="color-viewer-tint" value="#38bdf8" />
+            <label for="color-viewer-facade" style="margin-left: 8px;">Facade:</label>
+            <input type="color" id="color-viewer-facade" value="#f1f5f9" />
+          </div>
+
+          <!-- Custom Paint & Palette (Vehicles) -->
+          <div class="vehicle-paint-box" id="color-picker-cars" style="display: none; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <label for="color-viewer-car-paint" style="font-size: 11px; font-weight: 700; color: #38bdf8;">🎨 Body Paint:</label>
+              <input type="color" id="color-viewer-car-paint" value="#2563eb" style="width: 32px; height: 22px; cursor: pointer; border: none; border-radius: 4px; background: transparent;" />
+              <label for="color-viewer-car-tint" style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-left: 8px;">Glass:</label>
+              <input type="color" id="color-viewer-car-tint" value="#38bdf8" style="width: 32px; height: 22px; cursor: pointer; border: none; border-radius: 4px; background: transparent;" />
+            </div>
+            <!-- Quick Paint Swatches -->
+            <div class="car-swatch-row" id="car-swatches" style="display: flex; gap: 6px; justify-content: space-between;">
+              <span class="car-swatch active" data-color="#2563eb" style="background: #2563eb;" title="Royal Blue"></span>
+              <span class="car-swatch" data-color="#e11d48" style="background: #e11d48;" title="Crimson Red"></span>
+              <span class="car-swatch" data-color="#0f172a" style="background: #0f172a;" title="Stealth Black"></span>
+              <span class="car-swatch" data-color="#f8fafc" style="background: #f8fafc;" title="Pearl White"></span>
+              <span class="car-swatch" data-color="#eab308" style="background: #eab308;" title="Taxi Yellow"></span>
+              <span class="car-swatch" data-color="#059669" style="background: #059669;" title="Emerald Green"></span>
+              <span class="car-swatch" data-color="#ea580c" style="background: #ea580c;" title="Burnt Orange"></span>
+              <span class="car-swatch" data-color="#8b5cf6" style="background: #8b5cf6;" title="Cyber Violet"></span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <button id="btn-use-in-city" class="btn-primary" style="flex: 1; font-weight: 700; padding: 8px;" title="Apply this model to City simulation">
+              🏙️ Use in City
+            </button>
+            <button id="btn-viewer-snapshot" class="btn-secondary" style="padding: 8px 12px;" title="Save high-res PNG snapshot">
+              📸 Snapshot
+            </button>
+          </div>
         </div>
       </div>
 
@@ -412,19 +417,27 @@ export class ModelViewer {
     // Collapse / Expand sidebar
     const sidebar = o.querySelector('#viewer-sidebar');
     const btnCollapseSidebar = o.querySelector('#btn-collapse-viewer-sidebar');
-    const headerSidebar = o.querySelector('#viewer-sidebar-header');
-    if (sidebar && btnCollapseSidebar && headerSidebar) {
-      const toggleSidebarCollapse = (e) => {
-        if (e.target.closest('#btn-refresh-models')) return;
+    if (sidebar && btnCollapseSidebar) {
+      const toggleSidebarCollapse = (expandOnly = false) => {
+        if (expandOnly) {
+          sidebar.classList.remove('collapsed');
+          btnCollapseSidebar.textContent = '−';
+          btnCollapseSidebar.title = 'Collapse Sidebar';
+          return;
+        }
         sidebar.classList.toggle('collapsed');
         const isCollapsed = sidebar.classList.contains('collapsed');
         btnCollapseSidebar.textContent = isCollapsed ? '+' : '−';
+        btnCollapseSidebar.title = isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
       };
-      headerSidebar.addEventListener('click', toggleSidebarCollapse);
+
       btnCollapseSidebar.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleSidebarCollapse(e);
+        toggleSidebarCollapse();
       });
+
+      if (btnCatBld) btnCatBld.addEventListener('click', () => toggleSidebarCollapse(true));
+      if (btnCatCars) btnCatCars.addEventListener('click', () => toggleSidebarCollapse(true));
     }
 
     // Browse file button
@@ -779,6 +792,17 @@ export class ModelViewer {
     const o = this.overlayElement;
     if (!o) return;
 
+    // Automatically expand sidebar when category is selected
+    const sidebar = o.querySelector('#viewer-sidebar');
+    const btnCollapse = o.querySelector('#btn-collapse-viewer-sidebar');
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+      sidebar.classList.remove('collapsed');
+      if (btnCollapse) {
+        btnCollapse.textContent = '−';
+        btnCollapse.title = 'Collapse Sidebar';
+      }
+    }
+
     const btnBld = o.querySelector('#btn-cat-buildings');
     const btnCars = o.querySelector('#btn-cat-cars');
     if (btnBld) btnBld.classList.toggle('active', cat === 'buildings');
@@ -786,7 +810,7 @@ export class ModelViewer {
 
     const header = o.querySelector('#viewer-sidebar-title-text');
     if (header) {
-      header.textContent = cat === 'buildings' ? '📁 Building Models' : '🚗 Vehicle Showroom';
+      header.textContent = cat === 'buildings' ? '📁 Architectural Models' : '🚗 Vehicle Fleet Models';
     }
 
     const dropText = o.querySelector('#drop-zone-text');
@@ -922,23 +946,24 @@ export class ModelViewer {
       const carId = this.currentInfo?.carType || this.activeCarType || 'car1';
       this.app.traffic.setVehicleType(carId);
 
+      // Apply scale to traffic fleet
+      if (this.currentScale && this.app.traffic.setCarScale) {
+        this.app.traffic.setCarScale(this.currentScale);
+        if (this.app.stressPanel?.syncCarScale) {
+          this.app.stressPanel.syncCarScale(this.currentScale);
+        }
+      }
+
       // Sync stress panel fleet pills if present
       const pill = document.querySelector('#pill-traffic-model');
       if (pill) {
-        pill.querySelectorAll('.pill-btn').forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.vehicle === carId);
+        pill.querySelectorAll('.pill-option').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.car === carId);
         });
       }
 
-      // If custom paint color was selected, apply body color to traffic material
-      const paintInp = this.overlayElement.querySelector('#color-viewer-car-paint');
-      if (paintInp && this.app.traffic.carMaterial) {
-        this.app.traffic.carMaterial.color.set(paintInp.value);
-        this.app.traffic.carMaterial.needsUpdate = true;
-      }
-
-      const carName = this.currentInfo?.filename || carId;
-      this.showToast(`🚗 Applied ${carName} to 300 active city vehicles!`);
+      const carName = this.currentInfo?.displayName || this.currentInfo?.filename || carId;
+      this.showToast(`🚗 Applied ${carName} (Scale: ${this.currentScale.toFixed(2)}x) to city traffic fleet!`);
 
       // Switch to City view so user can watch their customized fleet cruising!
       setTimeout(() => {
@@ -1050,15 +1075,16 @@ export class ModelViewer {
 
   async loadModelFromSource(source, name = '') {
     const isFile = source instanceof File || source instanceof Blob;
-    const modelName = name || (isFile ? source.name : String(source).split('/').pop().split('?')[0]);
-    const ext = modelName.split('.').pop().toLowerCase();
+    const sourceFilename = isFile ? source.name : String(source).split('/').pop().split('?')[0];
+    const ext = sourceFilename.includes('.') ? sourceFilename.split('.').pop().toLowerCase() : (name.includes('.') ? name.split('.').pop().toLowerCase() : '');
+    const modelName = name || sourceFilename;
 
     if (ext === 'blend') {
       this.showBlendWarningModal();
       return;
     }
 
-    const isCar = ext === 'car' || modelName.includes('.car') || this.currentCategory === 'cars';
+    const isCar = ext === 'car' || modelName.toLowerCase().includes('car') || sourceFilename.toLowerCase().includes('car') || this.currentCategory === 'cars';
     const icon = isCar ? '🚗' : '🏢';
     this.showLoading(`Loading ${isCar ? 'Vehicle Model' : '3D Model'}...`, modelName, icon);
 
@@ -1068,7 +1094,7 @@ export class ModelViewer {
       });
       this.displayModel(model, info);
       this.hideLoading();
-      this.showToast(`Loaded ${info.filename} successfully!`);
+      this.showToast(`Loaded ${info.displayName || info.filename} successfully!`);
     } catch (err) {
       this.hideLoading();
       console.error('Failed to load model:', err);

@@ -41,6 +41,37 @@ export class StressPanel {
       });
     }
 
+    // City Vehicle Fleet Scale
+    const sliderCarScale = document.getElementById('slider-car-scale');
+    const lblCarScale = document.getElementById('lbl-car-scale');
+    const pillCarScalePresets = document.getElementById('pill-car-scale-presets');
+
+    if (sliderCarScale && lblCarScale) {
+      sliderCarScale.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        lblCarScale.textContent = `${val.toFixed(2)}x`;
+        this.app.traffic.setCarScale(val);
+        if (pillCarScalePresets) {
+          pillCarScalePresets.querySelectorAll('.pill-option').forEach(b => {
+            b.classList.toggle('active', Math.abs(parseFloat(b.dataset.scale) - val) < 0.06);
+          });
+        }
+      });
+    }
+
+    if (pillCarScalePresets && sliderCarScale && lblCarScale) {
+      pillCarScalePresets.querySelectorAll('.pill-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          pillCarScalePresets.querySelectorAll('.pill-option').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const scale = parseFloat(btn.dataset.scale);
+          sliderCarScale.value = scale.toFixed(2);
+          lblCarScale.textContent = `${scale.toFixed(2)}x`;
+          this.app.traffic.setCarScale(scale);
+        });
+      });
+    }
+
     // City Grid Size
     const pillCitySize = document.getElementById('pill-city-size');
     if (pillCitySize) {
@@ -233,6 +264,19 @@ export class StressPanel {
       };
       if (btnCollapseControls) btnCollapseControls.addEventListener('click', toggleControls);
       if (controlsHeader) controlsHeader.addEventListener('click', toggleControls);
+    }
+  }
+
+  syncCarScale(scale) {
+    const sliderCarScale = document.getElementById('slider-car-scale');
+    const lblCarScale = document.getElementById('lbl-car-scale');
+    const pillCarScalePresets = document.getElementById('pill-car-scale-presets');
+    if (sliderCarScale) sliderCarScale.value = scale.toFixed(2);
+    if (lblCarScale) lblCarScale.textContent = `${scale.toFixed(2)}x`;
+    if (pillCarScalePresets) {
+      pillCarScalePresets.querySelectorAll('.pill-option').forEach(b => {
+        b.classList.toggle('active', Math.abs(parseFloat(b.dataset.scale) - scale) < 0.06);
+      });
     }
   }
 }
