@@ -213,16 +213,37 @@ export class ModelManager {
         const isAccent = combinedName.includes('accent') || combinedName.includes('2767') || combinedName.includes('2770');
 
         const mat = child.material;
+        const hasTexture = Boolean(
+          mat && (mat.map || mat.normalMap || mat.roughnessMap || mat.metalnessMap || mat.emissiveMap || mat.aoMap)
+        );
+
         const isPlaceholderMat = !mat ||
           mat.name?.startsWith('Empty') ||
           mat.name?.startsWith('Material #') ||
           mat.name?.startsWith('default') ||
           mat.type === 'MeshPhongMaterial' ||
-          (!mat.map && mat.color && mat.color.r < 0.05 && mat.color.g < 0.05 && mat.color.b < 0.05);
+          (!hasTexture && mat.color && mat.color.r < 0.05 && mat.color.g < 0.05 && mat.color.b < 0.05);
 
-        if (isGlass) {
+        if (hasTexture) {
+          // Preserve textured materials from GLB/GLTF so embedded textures remain visible
+          child.material = mat.clone();
+          child.material.side = THREE.DoubleSide;
+          if (child.material.map) {
+            child.material.map.colorSpace = THREE.SRGBColorSpace;
+            child.material.map.needsUpdate = true;
+          }
+          child.material.needsUpdate = true;
+        } else if (isGlass) {
           child.material = materials.glass.clone();
           child.userData.isGlass = true;
+        } else if (!isPlaceholderMat) {
+          // Preserve valid authored PBR materials (e.g., Material.001, Material.003, Material.004)
+          child.material = mat.clone();
+          child.material.side = THREE.DoubleSide;
+          if (isRoof) child.userData.isRoof = true;
+          else if (isTrim) child.userData.isTrim = true;
+          else if (isAccent) child.userData.isAccent = true;
+          else child.userData.isFacade = true;
         } else if (isTrim) {
           child.material = materials.metalTrim.clone();
           child.userData.isTrim = true;
