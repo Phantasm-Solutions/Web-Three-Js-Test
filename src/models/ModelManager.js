@@ -40,7 +40,7 @@ export class ModelManager {
         name: 'Building_1.glb',
         filename: 'Building_1.glb',
         url: '/models/Building_1.glb',
-        size: 1459512,
+        size: 36652984,
         ext: 'glb'
       }
     ];
@@ -286,7 +286,7 @@ export class ModelManager {
 
     const info = {
       filename,
-      fileSize: fileSize ? (fileSize / (1024 * 1024)).toFixed(2) + ' MB' : '~1.74 MB',
+      fileSize: fileSize ? (fileSize / (1024 * 1024)).toFixed(2) + ' MB' : '~34.95 MB',
       vertices: vertexCount,
       triangles: Math.round(triangleCount),
       meshes: meshCount,
