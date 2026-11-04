@@ -300,7 +300,12 @@ class CityApp {
   rebuildCity(size) {
     this.city.generate(size);
     this.pedestrians.initPool();
-    this.traffic.initPool();
+    if (this.traffic.isGlbLoaded) {
+      this.traffic.initVehiclesState();
+      this.traffic.update(0);
+    } else {
+      this.traffic.initProceduralFallback();
+    }
     this.statsHUD.resetStats();
   }
 
@@ -332,7 +337,11 @@ class CityApp {
     // 1. Check hit against pedestrians or cars
     const hits = [];
     if (this.pedestrians.instancedMesh) hits.push(this.pedestrians.instancedMesh);
-    if (this.traffic.instancedMesh) hits.push(this.traffic.instancedMesh);
+    if (this.traffic.getRaycastTargets) {
+      hits.push(...this.traffic.getRaycastTargets());
+    } else if (this.traffic.instancedMesh) {
+      hits.push(this.traffic.instancedMesh);
+    }
 
     const intersects = this.raycaster.intersectObjects(hits, false);
     if (intersects.length > 0) {
@@ -346,11 +355,11 @@ class CityApp {
           this.showTargetTracker(`Citizen #${ped.id}`, `Speed: ${ped.speed.toFixed(1)} m/s | Walking`);
           return;
         }
-      } else if (hit.object === this.traffic.instancedMesh && instanceId !== undefined) {
-        const car = this.traffic.getVehicle(instanceId);
+      } else if (instanceId !== undefined) {
+        const car = this.traffic.getVehicleFromHit ? this.traffic.getVehicleFromHit(hit.object, instanceId) : this.traffic.getVehicle(instanceId);
         if (car) {
           this.cameraController.setTrackingTarget(car, new THREE.Vector3(0, 6, 14));
-          this.showTargetTracker(`Vehicle #${car.id}`, `Speed: ${(car.speed * 3.6).toFixed(0)} km/h | Cruising`);
+          this.showTargetTracker(`🚗 ${car.carName || 'Vehicle'} #${car.id}`, `Speed: ${(car.speed * 3.6).toFixed(0)} km/h | Active Fleet`);
           return;
         }
       }

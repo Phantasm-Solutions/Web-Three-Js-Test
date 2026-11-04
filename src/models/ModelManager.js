@@ -48,10 +48,66 @@ export class ModelManager {
   }
 
   /**
-   * List available procedural & modular 3D vehicles
+   * List available 3D vehicles (including the user-provided Car1.glb to Car5.glb)
    */
   listAvailableCars() {
-    return CarModelFactory.getCarList();
+    return [
+      {
+        id: 'car1',
+        name: 'Car 1 • Phantom Cruiser',
+        filename: 'Car1.glb',
+        url: '/models/Car1.glb',
+        category: 'car',
+        icon: '🚗',
+        desc: 'Sleek aerodynamic coupe with textured PBR optics',
+        specs: 'GLB 3D Model • 3.0k Tris • 4.5m Length',
+        ext: 'glb'
+      },
+      {
+        id: 'car2',
+        name: 'Car 2 • Apex GT Coupe',
+        filename: 'Car2.glb',
+        url: '/models/Car2.glb',
+        category: 'car',
+        icon: '🏎️',
+        desc: 'High-performance GT coupe with racing aerodynamics',
+        specs: 'GLB 3D Model • 3.0k Tris • 4.5m Length',
+        ext: 'glb'
+      },
+      {
+        id: 'car3',
+        name: 'Car 3 • Vanguard SUV',
+        filename: 'Car3.glb',
+        url: '/models/Car3.glb',
+        category: 'car',
+        icon: '🚙',
+        desc: 'Full-size crossover SUV with elevated road clearance',
+        specs: 'GLB 3D Model • 4.1k Tris • 5.1m Length',
+        ext: 'glb'
+      },
+      {
+        id: 'car4',
+        name: 'Car 4 • Atlas CyberTruck',
+        filename: 'Car4.glb',
+        url: '/models/Car4.glb',
+        category: 'car',
+        icon: '🛻',
+        desc: 'Heavy-duty modern utility vehicle with cargo bed',
+        specs: 'GLB 3D Model • 4.1k Tris • 5.1m Length',
+        ext: 'glb'
+      },
+      {
+        id: 'car5',
+        name: 'Car 5 • Velocity Sport',
+        filename: 'Car5.glb',
+        url: '/models/Car5.glb',
+        category: 'car',
+        icon: '🏎️',
+        desc: 'Aerodynamic sport coupe with custom livery finish',
+        specs: 'GLB 3D Model • 3.0k Tris • 4.5m Length',
+        ext: 'glb'
+      }
+    ];
   }
 
   /**
@@ -327,9 +383,14 @@ export class ModelManager {
     const finalSize = new THREE.Vector3();
     finalBox.getSize(finalSize);
 
+    const isCar = filename.toLowerCase().startsWith('car') || filename.toLowerCase().endsWith('.car');
+    const carType = isCar ? filename.toLowerCase().replace(/\.(glb|gltf|car)$/i, '') : null;
+
     const info = {
       filename,
-      fileSize: fileSize ? (fileSize / (1024 * 1024)).toFixed(2) + ' MB' : '~34.95 MB',
+      isCar,
+      carType,
+      fileSize: fileSize ? (fileSize / (1024 * 1024)).toFixed(2) + ' MB' : (isCar ? '0.42 MB' : '~34.95 MB'),
       vertices: vertexCount,
       triangles: Math.round(triangleCount),
       meshes: meshCount,

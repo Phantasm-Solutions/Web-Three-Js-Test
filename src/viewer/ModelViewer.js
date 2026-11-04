@@ -829,10 +829,12 @@ export class ModelViewer {
     if (!listContainer) return;
 
     listContainer.innerHTML = '<div class="loading-spinner-small">Scanning...</div>';
-    const models = await this.modelManager.listAvailableModels();
+    const allModels = await this.modelManager.listAvailableModels();
+    // Exclude Car models from buildings list
+    const models = (allModels || []).filter(m => !m.filename.toLowerCase().startsWith('car'));
 
     if (!models || models.length === 0) {
-      listContainer.innerHTML = '<div style="font-size: 11px; color: #94a3b8; padding: 8px;">No 3D models found in models/ folder.</div>';
+      listContainer.innerHTML = '<div style="font-size: 11px; color: #94a3b8; padding: 8px;">No architectural models found.</div>';
       return;
     }
 
@@ -849,9 +851,9 @@ export class ModelViewer {
         <div class="m-item-icon">🏢</div>
         <div class="m-item-details">
           <div class="m-item-title">${m.filename}</div>
-          <div class="m-item-sub">Format: ${m.ext ? m.ext.toUpperCase() : 'OBJ'} ${sizeStr ? `• ${sizeStr}` : ''}</div>
+          <div class="m-item-sub">Format: ${m.ext ? m.ext.toUpperCase() : 'GLB'} ${sizeStr ? `• ${sizeStr}` : ''}</div>
         </div>
-        <div class="m-item-badge">${m.ext ? m.ext.toUpperCase() : 'OBJ'}</div>
+        <div class="m-item-badge">${m.ext ? m.ext.toUpperCase() : 'GLB'}</div>
       `;
 
       item.addEventListener('click', () => {
@@ -893,7 +895,7 @@ export class ModelViewer {
         listContainer.querySelectorAll('.viewer-model-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
         this.activeCarType = c.id;
-        this.loadModelFromSource(c.filename, c.name);
+        this.loadModelFromSource(c.url || `/models/${c.filename}`, c.name);
       });
 
       listContainer.appendChild(item);
@@ -903,7 +905,7 @@ export class ModelViewer {
     if (!this.currentInfo || !this.currentInfo.isCar) {
       const firstCar = cars[0];
       this.activeCarType = firstCar.id;
-      this.loadModelFromSource(firstCar.filename, firstCar.name);
+      this.loadModelFromSource(firstCar.url || `/models/${firstCar.filename}`, firstCar.name);
     }
   }
 
@@ -917,8 +919,16 @@ export class ModelViewer {
       }
     } else {
       // Vehicle mode: Apply this car to city traffic fleet!
-      const carId = this.currentInfo?.carType || this.activeCarType || 'sedan';
+      const carId = this.currentInfo?.carType || this.activeCarType || 'car1';
       this.app.traffic.setVehicleType(carId);
+
+      // Sync stress panel fleet pills if present
+      const pill = document.querySelector('#pill-traffic-model');
+      if (pill) {
+        pill.querySelectorAll('.pill-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.vehicle === carId);
+        });
+      }
 
       // If custom paint color was selected, apply body color to traffic material
       const paintInp = this.overlayElement.querySelector('#color-viewer-car-paint');
@@ -946,9 +956,15 @@ export class ModelViewer {
     if (!this.currentModelGroup) return;
     const col = new THREE.Color(hex);
     this.currentModelGroup.traverse(child => {
-      if (child.isMesh && child.userData.isBody && child.material) {
-        child.material.color.copy(col);
-        child.material.needsUpdate = true;
+      if (child.isMesh && child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(m => {
+          const mName = (m.name || '').toLowerCase();
+          if (child.userData.isBody || mName.includes('colorvar') || mName.includes('body') || mName.includes('paint') || (!mName.includes('light') && !mName.includes('glass'))) {
+            m.color.copy(col);
+            m.needsUpdate = true;
+          }
+        });
       }
     });
   }
